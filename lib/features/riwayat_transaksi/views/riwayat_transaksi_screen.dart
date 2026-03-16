@@ -19,6 +19,7 @@
 
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/custom_bottom_nav.dart';
 
 // ======================================================================
 // MODEL DATA TRANSAKSI (Dummy / Sementara)
@@ -226,10 +227,23 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                 ),
               ),
 
-              const SizedBox(height: 30),
             ],
           ),
         ),
+      ),
+      // ================================================================
+      // BOTTOM NAVIGATION BAR
+      // ================================================================
+      bottomNavigationBar: CustomBottomNav(
+        currentIndex: 0, // Set to 0 (Home) as placeholder
+        onTap: (index) {
+          // Navigasikan kembali ke MainScreen dengan tab yang bersangkutan
+          if (index != 0) {
+            // Karena tidak ada sistem state manajemen global yang terlihat mengatur index MainScreen dari luar saat ini,
+            // kita bisa kembalikan ke Home saja via pop, namun lebih ideal jika di masa depan di handle lewat GetX.
+            Navigator.popUntil(context, (route) => route.isFirst);
+          }
+        },
       ),
     );
   }
