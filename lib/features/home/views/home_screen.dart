@@ -65,14 +65,31 @@ class HomeScreen extends StatelessWidget {
               const FinanceMenu(),
               const SizedBox(height: 25),
 
-              // 5. Tempat untuk Daftar Transaksi
-              const Text(
-                "Riwayat Transaksi Hari Ini",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
+              // 5. Header Daftar Transaksi + Tombol "Lihat Semua"
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Riwayat Transaksi Hari Ini",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  // Tombol navigasi ke RiwayatTransaksiScreen
+                  GestureDetector(
+                    onTap: () =>
+                        Navigator.pushNamed(context, '/riwayat-transaksi'),
+                    child: const Text(
+                      "Lihat Semua",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF4CAF50),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
