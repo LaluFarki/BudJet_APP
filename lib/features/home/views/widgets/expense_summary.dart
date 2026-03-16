@@ -209,6 +209,7 @@ class ExpenseSummary extends StatelessWidget {
             decoration: BoxDecoration(
               // Menggunakan warna primaryGreen
               // tapi diberi transparansi agar lebih soft
+              
               color: AppColors.cardRed.withOpacity(0.8),
 
               borderRadius: BorderRadius.circular(15),

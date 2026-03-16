@@ -47,3 +47,4 @@ class BalanceCard extends StatelessWidget {
     );
   }
 }
+
