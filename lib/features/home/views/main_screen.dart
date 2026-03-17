@@ -205,6 +205,15 @@ class _MainScreenState extends State<MainScreen> {
       extendBody: true,
 
       // ========================================================
+      // [PLAYGROUND] TOMBOL SEMENTARA — hapus setelah frontend jadi
+      // ========================================================
+      floatingActionButton: FloatingActionButton.small(
+        backgroundColor: Colors.deepPurple,
+        onPressed: () => Navigator.pushNamed(context, '/playground'),
+        child: const Icon(Icons.science, color: Colors.white),
+      ),
+
+      // ========================================================
       // BOTTOM NAVIGATION BAR
       // ========================================================
       //
