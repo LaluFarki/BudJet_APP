@@ -2,33 +2,39 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TransactionModel {
   final String id;
-  final String title;
   final double amount;
-  final String type; // 'income' or 'expense'
-  final String category;
+  final DateTime createdAt;
   final DateTime date;
+  final String kategori;
+  final String note;
+  final String title;
+  final String type; // 'income' or 'expense'
 
   TransactionModel({
     required this.id,
-    required this.title,
     required this.amount,
-    required this.type,
-    required this.category,
+    required this.createdAt,
     required this.date,
+    required this.kategori,
+    required this.note,
+    required this.title,
+    required this.type,
   });
 
   /// Membuat object [TransactionModel] dari Firestore [DocumentSnapshot]
   factory TransactionModel.fromFirestore(DocumentSnapshot doc) {
-    // Cast data ke bentuk Map
+    // Cast data ke bentuk Map secara aman
     final data = doc.data() as Map<String, dynamic>? ?? {};
 
     return TransactionModel(
-      id: doc.id,
-      title: data['title'] ?? '',
+      id: doc.id,   // Selalu best-practice menyimpan ID dokumen Firestore
       amount: (data['amount'] ?? 0).toDouble(),
+      title: data['title'] ?? '',
+      kategori: data['kategori'] ?? '',
+      note: data['note'] ?? '',
       type: data['type'] ?? 'expense',
-      category: data['category'] ?? '',
       // Konversi Timestamp dari Firestore kembali menjadi DateTime
+      createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -36,11 +42,13 @@ class TransactionModel {
   /// Mengubah object [TransactionModel] menjadi Map untuk disimpan ke Firestore
   Map<String, dynamic> toFirestore() {
     return {
-      'title': title,
       'amount': amount,
+      'title': title,
+      'kategori': kategori,
+      'note': note,
       'type': type,
-      'category': category,
-      // Konversi DateTime menjadi Timestamp agar sesuai dengan format Firestore
+      // Konversi DateTime menjadi Timestamp agar dikenali oleh Firestore
+      'created_at': Timestamp.fromDate(createdAt),
       'date': Timestamp.fromDate(date),
     };
   }
