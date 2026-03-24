@@ -167,12 +167,21 @@ class TransactionController extends GetxController {
   void _listenToTransactions() {
     _firestore
         .collection('transactions')
-        .orderBy('date', descending: true) // Urutkan dari yang terbaru (descending)
+        .orderBy('date', descending: true) // Urutkan utama dari tanggal
         .snapshots()
         .listen((QuerySnapshot snapshot) {
-      transactions.value = snapshot.docs
+      final list = snapshot.docs
           .map((doc) => TransactionModel.fromFirestore(doc))
           .toList();
+      
+      // Sort tambahan: Jika tanggal sama, urutkan berdasarkan waktu diinput (terbaru di atas)
+      list.sort((a, b) {
+        final dateCmp = b.date.compareTo(a.date);
+        if (dateCmp != 0) return dateCmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
+      
+      transactions.value = list;
     });
   }
 

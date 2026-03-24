@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../core/utils/app_helpers.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../controllers/transaction_controller.dart';
@@ -179,14 +180,19 @@ class AddTransactionScreen extends StatelessWidget {
                       ),
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.restaurant, color: Colors.orange, size: 20),
-                          ),
+                          Obx(() {
+                            final catColor = AppHelpers.getCategoryColor(_selectedCategory.value, '');
+                            final catIcon = AppHelpers.getCategoryIcon(_selectedCategory.value, '');
+                            
+                            return Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: catColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(catIcon, color: catColor, size: 20),
+                            );
+                          }),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Obx(() => DropdownButtonHideUnderline(
