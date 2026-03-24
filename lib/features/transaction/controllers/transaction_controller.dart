@@ -9,6 +9,24 @@ class TransactionController extends GetxController {
   var transactions = <TransactionModel>[].obs;
   var userBalance = 0.0.obs;
 
+  // --- GETTER KOMPUTASI REAKTIF ---
+  // Menghitung total seluruh pengeluaran
+  double get totalExpense => transactions
+      .where((tx) => tx.type == 'expense')
+      .fold(0.0, (sum, item) => sum + item.amount);
+
+  // Menghitung total pengeluaran khusus hari ini
+  double get todayExpense {
+    final now = DateTime.now();
+    return transactions
+        .where((tx) =>
+            tx.type == 'expense' &&
+            tx.date.year == now.year &&
+            tx.date.month == now.month &&
+            tx.date.day == now.day)
+        .fold(0.0, (sum, item) => sum + item.amount);
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -33,7 +51,7 @@ class TransactionController extends GetxController {
   void _listenToBalance() {
     _firestore
         .collection('users')
-        .doc('user_farki')
+        .doc('users_farki')
         .snapshots()
         .listen((DocumentSnapshot doc) {
       if (doc.exists) {
@@ -51,7 +69,7 @@ class TransactionController extends GetxController {
     try {
       // Menggunakan runTransaction agar proses Read & Write dilakukan secara bersamaan dengan aman
       await _firestore.runTransaction((Transaction tx) async {
-        DocumentReference userRef = _firestore.collection('users').doc('user_farki');
+        DocumentReference userRef = _firestore.collection('users').doc('users_farki');
         // Membuat referensi dokumen baru di transaksi
         DocumentReference txnRef = _firestore.collection('transactions').doc();
 
@@ -98,7 +116,7 @@ class TransactionController extends GetxController {
   Future<void> deleteTransaction(TransactionModel transaction) async {
     try {
       await _firestore.runTransaction((Transaction tx) async {
-        DocumentReference userRef = _firestore.collection('users').doc('user_farki');
+        DocumentReference userRef = _firestore.collection('users').doc('users_farki');
         // Mengambil referensi dokumen transaksi spesifik menggunakan ID dari model
         DocumentReference txnRef = _firestore.collection('transactions').doc(transaction.id);
 

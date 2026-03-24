@@ -40,7 +40,9 @@ import 'package:flutter/material.dart';
 // - AppColors.textDark
 // - AppColors.primaryGreen
 //
+import 'package:get/get.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../transaction/controllers/transaction_controller.dart';
 
 // ======================================================================
 // CLASS EXPENSE SUMMARY
@@ -134,7 +136,7 @@ class ExpenseSummary extends StatelessWidget {
               // Meratakan isi ke kiri
               crossAxisAlignment: CrossAxisAlignment.start,
 
-              children: const [
+              children: [
                 // ======================================================
                 // TEKS JUDUL
                 // ======================================================
@@ -170,18 +172,18 @@ class ExpenseSummary extends StatelessWidget {
                 //
                 // Menampilkan jumlah pengeluaran hari ini
                 //
-                Text(
-                  'Rp14.500',
-
-                  style: TextStyle(
-                    color: AppColors.textDark,
-
-                    // Ukuran lebih besar karena ini data utama
-                    fontSize: 22,
-
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                // Menampilkan jumlah pengeluaran hari ini secara dinamis
+                Obx(() {
+                  final txCtrl = Get.find<TransactionController>();
+                  return Text(
+                    'Rp${txCtrl.todayExpense.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: AppColors.textDark,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -222,7 +224,7 @@ class ExpenseSummary extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
 
-              children: const [
+              children: [
                 // Judul informasi
                 Text(
                   'Total Pengeluaran',
@@ -239,17 +241,18 @@ class ExpenseSummary extends StatelessWidget {
                 SizedBox(height: 10),
 
                 // Total pengeluaran keseluruhan
-                Text(
-                  'Rp737.500',
-
-                  style: TextStyle(
-                    color: AppColors.textDark,
-
-                    fontSize: 22,
-
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                // Total pengeluaran keseluruhan secara dinamis
+                Obx(() {
+                  final txCtrl = Get.find<TransactionController>();
+                  return Text(
+                    'Rp${txCtrl.totalExpense.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: AppColors.textDark,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                }),
               ],
             ),
           ),
