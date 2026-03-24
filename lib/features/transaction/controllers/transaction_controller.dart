@@ -27,6 +27,15 @@ class TransactionController extends GetxController {
         .fold(0.0, (sum, item) => sum + item.amount);
   }
 
+  // --- MENGAMBIL LIST TRANSAKSI HARI INI SAJA ---
+  List<TransactionModel> get todayTransactions {
+    final now = DateTime.now();
+    return transactions.where((tx) =>
+        tx.date.year == now.year &&
+        tx.date.month == now.month &&
+        tx.date.day == now.day).toList();
+  }
+
   @override
   void onInit() {
     super.onInit();

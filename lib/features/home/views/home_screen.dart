@@ -92,6 +92,110 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 15),
+
+              // ======================================================
+              // LIST FITUR: DAFTAR TRANSAKSI HARI INI
+              // ======================================================
+              Obx(() {
+                final txController = Get.find<TransactionController>();
+                final todayTxs = txController.todayTransactions;
+
+                // Jika hari ini belum ada transaksi sama sekali
+                if (todayTxs.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(30.0),
+                      child: Text(
+                        'Belum ada transaksi hari ini.',
+                        style: TextStyle(color: AppColors.textGrey, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  );
+                }
+
+                // Render List secara dinamis tanpa Scroll karena di dalam SingleChildScrollView
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: todayTxs.length,
+                  itemBuilder: (context, index) {
+                    final tx = todayTxs[index];
+                    final isIncome = tx.type == 'income';
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          // Icon Transaksi (Hijau ke bawah / Merah ke atas)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isIncome
+                                  ? Colors.green.withOpacity(0.15)
+                                  : Colors.red.withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isIncome
+                                  ? Icons.arrow_downward_rounded
+                                  : Icons.arrow_upward_rounded,
+                              color: isIncome ? Colors.green : Colors.red,
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          // Detail Transaksi
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  tx.title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  tx.kategori,
+                                  style: const TextStyle(
+                                    color: AppColors.textGrey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Nominal Transaksi
+                          Text(
+                            isIncome
+                                ? '+ Rp${tx.amount.toStringAsFixed(0)}'
+                                : '- Rp${tx.amount.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: isIncome ? Colors.green : Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }),
             ],
           ),
         ),
