@@ -13,7 +13,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Inisialisasi controller GetX
-    final txController = Get.put(TransactionController());
+    Get.put(TransactionController());
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
