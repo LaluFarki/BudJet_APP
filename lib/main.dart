@@ -1,7 +1,15 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'routes/app_routes.dart'; // Memanggil peta jalan kita
+import 'firebase_options.dart'; // File yang dibuat oleh flutterfire configure
 
-void main() {
+void main() async {
+  // Wajib: memastikan Flutter siap untuk kode async
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const MyApp());
 }
 
