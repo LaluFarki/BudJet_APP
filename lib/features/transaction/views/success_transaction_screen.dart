@@ -150,7 +150,7 @@ class SuccessTransactionScreen extends StatelessWidget {
                       children: [
                         const Text('Tanggal', style: TextStyle(color: Colors.grey, fontSize: 14)),
                         Text(
-                          DateFormat('dd MMM, HH:mm', 'id_ID').format(tx.date), 
+                          DateFormat('dd MMM, HH:mm').format(tx.date), 
                           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textDark)
                         ),
                       ],

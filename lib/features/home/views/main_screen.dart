@@ -15,6 +15,7 @@
 // Mengimpor package utama Flutter Material Design
 // Berisi widget seperti Scaffold, Text, Center, dll.
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 // Mengimpor file warna global aplikasi
 // Lokasi file:
@@ -205,12 +206,13 @@ class _MainScreenState extends State<MainScreen> {
       extendBody: true,
 
       // ========================================================
-      // [PLAYGROUND] TOMBOL SEMENTARA — hapus setelah frontend jadi
+      // TAMPILAN TAMBAH TRANSAKSI
       // ========================================================
-      floatingActionButton: FloatingActionButton.small(
-        backgroundColor: Colors.deepPurple,
-        onPressed: () => Navigator.pushNamed(context, '/playground'),
-        child: const Icon(Icons.science, color: Colors.white),
+      floatingActionButton: FloatingActionButton(
+        elevation: 0,
+        backgroundColor: const Color(0xFFDCE775), // Lime Green
+        onPressed: () => Get.toNamed('/add-tx'), // Pakai GetX Route untuk add
+        child: const Icon(Icons.add, color: AppColors.textDark),
       ),
 
       // ========================================================

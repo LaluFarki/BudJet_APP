@@ -9,6 +9,8 @@ import '../features/home/views/main_screen.dart';
 // File ini berisi tampilan halaman riwayat transaksi
 import '../features/history/views/history_screen.dart';
 import '../features/riwayat_transaksi/views/riwayat_transaksi_screen.dart';
+import '../features/transaction/views/add_transaction_screen.dart';
+import '../features/transaction/views/success_transaction_screen.dart';
 
 class AppRoutes {
   // Membuat nama route untuk halaman home
@@ -21,6 +23,8 @@ class AppRoutes {
   // [PLAYGROUND] Route sementara — hapus setelah frontend jadi
   static const String playground = '/playground';
   static const String riwayatTransaksi = '/riwayat-transaksi';
+  static const String addTx = '/add-tx';
+  static const String successTx = '/success-tx';
 
   // Method ini mengembalikan Map yang berisi daftar route aplikasi
   // Map ini berisi pasangan antara nama route (String)
@@ -49,6 +53,8 @@ class AppRoutes {
       // [PLAYGROUND] Hapus baris ini setelah frontend jadi
       // playground: (context) => const AlgoritmaPlayground(),
       // riwayatTransaksi: (context) => const RiwayatTransaksiScreen(),
+      addTx: (context) => AddTransactionScreen(),
+      successTx: (context) => const SuccessTransactionScreen(),
     };
   }
 }
