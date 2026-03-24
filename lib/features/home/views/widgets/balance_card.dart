@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 
-class BalanceCard extends StatefulWidget {
+class BalanceCard extends StatelessWidget {
   const BalanceCard({Key? key}) : super(key: key);
-
-  @override
-  State<BalanceCard> createState() => _BalanceCardState();
-}
-
-class _BalanceCardState extends State<BalanceCard> {
-  bool _isVisible = true;
 
   @override
   Widget build(BuildContext context) {
@@ -31,33 +24,21 @@ class _BalanceCardState extends State<BalanceCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _isVisible ? 'Rp425.000' : 'Rp******',
-                style: const TextStyle(
+              const Text(
+                'Rp425.000',
+                style: TextStyle(
                   color: AppColors.textDark,
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isVisible = !_isVisible;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _isVisible
-                        ? Icons.visibility
-                        : Icons.visibility_off,
-                    color: AppColors.textDark,
-                  ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.visibility, color: AppColors.textDark),
               ),
             ],
           ),
