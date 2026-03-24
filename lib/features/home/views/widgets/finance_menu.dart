@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../../core/constants/app_colors.dart';
-// Ini adalah import untuk memanggil halaman history_screen yang sudah kita buat sebelumnya
-import '../../../history/views/history_screen.dart';
 
 class FinanceMenu extends StatelessWidget {
   const FinanceMenu({Key? key}) : super(key: key);
@@ -17,11 +16,7 @@ class FinanceMenu extends StatelessWidget {
           child: InkWell(
             onTap: () {
               // FUNGSI NAVIGASI: Mengarahkan pengguna dari halaman Home ke halaman History
-              // Navigator.push akan menumpuk halaman baru di atas halaman saat ini
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const HistoryScreen()),
-              );
+              Get.toNamed('/riwayat-transaksi');
             },
             child: Container(
               padding: const EdgeInsets.symmetric(

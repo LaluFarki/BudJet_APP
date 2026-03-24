@@ -52,7 +52,7 @@ class AppRoutes {
 
       // [PLAYGROUND] Hapus baris ini setelah frontend jadi
       // playground: (context) => const AlgoritmaPlayground(),
-      // riwayatTransaksi: (context) => const RiwayatTransaksiScreen(),
+      riwayatTransaksi: (context) => const RiwayatTransaksiScreen(),
       addTx: (context) => AddTransactionScreen(),
       successTx: (context) => const SuccessTransactionScreen(),
     };

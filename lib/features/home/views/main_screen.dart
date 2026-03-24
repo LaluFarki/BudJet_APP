@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../transaction/controllers/transaction_controller.dart';
 import 'home_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -15,7 +16,19 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _pages = [
     const HomeScreen(),
-    const Center(child: Text("Halaman Profil (Belum Dibuat)")),
+    Center(
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFDCE775),
+          foregroundColor: Colors.black,
+        ),
+        onPressed: () {
+          final txCtrl = Get.find<TransactionController>();
+          txCtrl.injectDummyData();
+        },
+        child: const Text("Suntik Data Dummy ke Firebase"),
+      ),
+    ),
   ];
 
   void _onNavTapped(int index) {

@@ -8,12 +8,19 @@ class TransactionController extends GetxController {
   // State Reaktif (Observable)
   var transactions = <TransactionModel>[].obs;
   var userBalance = 0.0.obs;
+  var isBalanceVisible = true.obs;
 
   // --- GETTER KOMPUTASI REAKTIF ---
-  // Menghitung total seluruh pengeluaran
-  double get totalExpense => transactions
-      .where((tx) => tx.type == 'expense')
-      .fold(0.0, (sum, item) => sum + item.amount);
+  // Menghitung pengeluaran bulan ini (akan otomatis reset tiap berganti bulan)
+  double get totalExpense {
+    final now = DateTime.now();
+    return transactions
+        .where((tx) => 
+            tx.type == 'expense' && 
+            tx.date.year == now.year && 
+            tx.date.month == now.month)
+        .fold(0.0, (sum, item) => sum + item.amount);
+  }
 
   // Menghitung total pengeluaran khusus hari ini
   double get todayExpense {
@@ -41,6 +48,48 @@ class TransactionController extends GetxController {
     super.onInit();
     _listenToTransactions();
     _listenToBalance();
+  }
+
+  /// Update Saldo Utama Secara Manual (Topup/Koreksi)
+  Future<void> updateBalance(double newBalance) async {
+    try {
+      await _firestore.collection('users').doc('users_farki').set(
+        {'balance': newBalance},
+        SetOptions(merge: true),
+      );
+      Get.back(); // Tutup Pop-up (Default Dialog)
+      Get.snackbar(
+        'Berhasil', 
+        'Saldo utama berhasil diperbarui!',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Gagal', 
+        'Terjadi kesalahan saat update saldo: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  /// FUNGSI DUMMY: Membuat 15 data sembarang yang masuk ke firebase
+  Future<void> injectDummyData() async {
+    for (int i = 0; i < 15; i++) {
+      final isIncome = i % 3 == 0;
+      final dummyTx = TransactionModel(
+        id: '',
+        amount: isIncome ? 150000.0 : 25000.0 + (i * 1000),
+        createdAt: DateTime.now(),
+        date: i < 10 ? DateTime.now() : DateTime.now().subtract(Duration(days: i)), 
+        // 10 pertama di set hari ini, sisanya mundur ke belakang
+        kategori: isIncome ? 'Gaji/Bonus' : 'Makan & Minuman',
+        note: 'Dummy data $i',
+        title: isIncome ? 'Bonus $i' : 'Pengeluaran $i',
+        type: isIncome ? 'income' : 'expense',
+      );
+      await addTransaction(dummyTx);
+    }
+    Get.snackbar('Sukses', '15 Data Dummy berhasil disuntikkan ke Firebase!', snackPosition: SnackPosition.BOTTOM);
   }
 
   /// Mengambil data transaksi secara real-time dari Firestore

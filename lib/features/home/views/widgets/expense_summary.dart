@@ -227,7 +227,7 @@ class ExpenseSummary extends StatelessWidget {
               children: [
                 // Judul informasi
                 Text(
-                  'Total Pengeluaran',
+                  'Pengeluaran Bulan Ini',
 
                   style: TextStyle(
                     color: AppColors.textDark,

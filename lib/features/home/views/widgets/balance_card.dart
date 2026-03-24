@@ -6,6 +6,43 @@ import '../../../transaction/controllers/transaction_controller.dart';
 class BalanceCard extends StatelessWidget {
   const BalanceCard({Key? key}) : super(key: key);
 
+  void _showEditBalanceDialog(BuildContext context, TransactionController txCtrl) {
+    final TextEditingController amountController = TextEditingController(
+      text: txCtrl.userBalance.value.toStringAsFixed(0),
+    );
+
+    Get.defaultDialog(
+      title: 'Edit Saldo Utama',
+      titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+      content: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: TextField(
+          controller: amountController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Sisa Saldo Baru',
+            prefixText: 'Rp ',
+            border: OutlineInputBorder(),
+          ),
+        ),
+      ),
+      textConfirm: 'Simpan',
+      textCancel: 'Batal',
+      confirmTextColor: Colors.black,
+      buttonColor: const Color(0xFFDCE775), // Sesuai warna button aplikasi Anda
+      cancelTextColor: Colors.grey,
+      onConfirm: () {
+        final cleanText = amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+        final newBalance = double.tryParse(cleanText);
+        if (newBalance != null) {
+          txCtrl.updateBalance(newBalance);
+        } else {
+          Get.snackbar('Kesalahan', 'Silakan masukkan angka valid');
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -18,9 +55,29 @@ class BalanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Saldo Saya',
-            style: TextStyle(color: AppColors.textDark, fontSize: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Saldo Saya',
+                style: TextStyle(color: AppColors.textDark, fontSize: 14),
+              ),
+              // Tombol Icon Edit Kecil
+              GestureDetector(
+                onTap: () {
+                  final txCtrl = Get.find<TransactionController>();
+                  _showEditBalanceDialog(context, txCtrl);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.edit_outlined, size: 16, color: AppColors.textDark),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Row(
@@ -28,7 +85,18 @@ class BalanceCard extends StatelessWidget {
             children: [
               Obx(() {
                 final txCtrl = Get.find<TransactionController>();
-                // Menampilkan saldo realtime (contoh format: Rp425000), bisa diformat lebih rapi nanti
+                // Cek state mata / hide
+                if (!txCtrl.isBalanceVisible.value) {
+                  return const Text(
+                    'Rp ********',
+                    style: TextStyle(
+                      color: AppColors.textDark,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                }
+
                 return Text(
                   'Rp${txCtrl.userBalance.value.toStringAsFixed(0)}',
                   style: const TextStyle(
@@ -38,13 +106,26 @@ class BalanceCard extends StatelessWidget {
                   ),
                 );
               }),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.1),
-                  shape: BoxShape.circle,
+              // Tombol Mata (Hide/Show)
+              GestureDetector(
+                onTap: () {
+                  final txCtrl = Get.find<TransactionController>();
+                  txCtrl.isBalanceVisible.value = !txCtrl.isBalanceVisible.value;
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Obx(() {
+                    final txCtrl = Get.find<TransactionController>();
+                    return Icon(
+                      txCtrl.isBalanceVisible.value ? Icons.visibility : Icons.visibility_off, 
+                      color: AppColors.textDark
+                    );
+                  }),
                 ),
-                child: const Icon(Icons.visibility, color: AppColors.textDark),
               ),
             ],
           ),

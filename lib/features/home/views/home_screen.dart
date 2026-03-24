@@ -118,7 +118,7 @@ class HomeScreen extends StatelessWidget {
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: todayTxs.length,
+                  itemCount: todayTxs.length > 7 ? 7 : todayTxs.length,
                   itemBuilder: (context, index) {
                     final tx = todayTxs[index];
                     final isIncome = tx.type == 'income';
