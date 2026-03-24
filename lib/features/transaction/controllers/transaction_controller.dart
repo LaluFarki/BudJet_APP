@@ -92,6 +92,77 @@ class TransactionController extends GetxController {
     Get.snackbar('Sukses', '15 Data Dummy berhasil disuntikkan ke Firebase!', snackPosition: SnackPosition.BOTTOM);
   }
 
+  /// FUNGSI HAPUS: Menghapus transaksi dan otomatis merekap saldo (Refund/Deduct) secara Atomic
+  Future<void> deleteTransaction(TransactionModel tx) async {
+    try {
+      final userDocRef = _firestore.collection('users').doc('users_farki');
+      final txDocRef = _firestore.collection('transactions').doc(tx.id);
+
+      await _firestore.runTransaction((transaction) async {
+        final userSnapshot = await transaction.get(userDocRef);
+        double currentBalance = 0.0;
+        if (userSnapshot.exists && userSnapshot.data()!.containsKey('balance')) {
+          currentBalance = (userSnapshot.data()!['balance'] as num).toDouble();
+        }
+
+        // Hitung saldo baru (karena dihapus, efeknya DIBALIK)
+        double newBalance = currentBalance;
+        if (tx.type == 'expense') {
+          newBalance += tx.amount; // Uang kembali
+        } else {
+          newBalance -= tx.amount; // Uang ditarik balik
+        }
+
+        transaction.update(userDocRef, {'balance': newBalance});
+        transaction.delete(txDocRef);
+      });
+
+      Get.snackbar('Terhapus', 'Transaksi berhasil dihapus!', snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      Get.snackbar('Gagal', 'Kesalahan menghapus: $e', snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
+  /// FUNGSI UBAH: Menyimpan perubahan transaksi dan menghitung selisih nominal ke Saldo secara Atomic
+  Future<void> updateTransaction(TransactionModel oldTx, TransactionModel newTx) async {
+    try {
+      final userDocRef = _firestore.collection('users').doc('users_farki');
+      final txDocRef = _firestore.collection('transactions').doc(oldTx.id);
+
+      await _firestore.runTransaction((transaction) async {
+        final userSnapshot = await transaction.get(userDocRef);
+        double currentBalance = 0.0;
+        if (userSnapshot.exists && userSnapshot.data()!.containsKey('balance')) {
+          currentBalance = (userSnapshot.data()!['balance'] as num).toDouble();
+        }
+
+        double newBalance = currentBalance;
+
+        // Langkah 1: Batalkan efek transaksi lama (Refund)
+        if (oldTx.type == 'expense') {
+          newBalance += oldTx.amount;
+        } else {
+          newBalance -= oldTx.amount;
+        }
+
+        // Langkah 2: Terapkan efek transaksi baru
+        if (newTx.type == 'expense') {
+          newBalance -= newTx.amount;
+        } else {
+          newBalance += newTx.amount;
+        }
+
+        transaction.update(userDocRef, {'balance': newBalance});
+        transaction.update(txDocRef, newTx.toFirestore());
+      });
+
+      Get.snackbar('Tersimpan', 'Perubahan transaksi berhasil disimpan!', snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      Get.snackbar('Gagal', 'Terjadi kesalahan edit: $e', snackPosition: SnackPosition.BOTTOM);
+      throw e; 
+    }
+  }
+
   /// Mengambil data transaksi secara real-time dari Firestore
   void _listenToTransactions() {
     _firestore
@@ -170,50 +241,5 @@ class TransactionController extends GetxController {
     }
   }
 
-  /// Menghapus Transaksi dan mengembalikan Saldo seperti semula
-  Future<void> deleteTransaction(TransactionModel transaction) async {
-    try {
-      await _firestore.runTransaction((Transaction tx) async {
-        DocumentReference userRef = _firestore.collection('users').doc('users_farki');
-        // Mengambil referensi dokumen transaksi spesifik menggunakan ID dari model
-        DocumentReference txnRef = _firestore.collection('transactions').doc(transaction.id);
-
-        DocumentSnapshot userSnapshot = await tx.get(userRef);
-
-        double currentBalance = 0.0;
-        if (userSnapshot.exists) {
-          final data = userSnapshot.data() as Map<String, dynamic>? ?? {};
-          currentBalance = (data['balance'] ?? 0).toDouble();
-        }
-
-        // Hitung Saldo Baru (Logika Kembalikan Uang)
-        double newBalance = currentBalance;
-        if (transaction.type == 'income') {
-          // Kebalikan income (dikurangi)
-          newBalance -= transaction.amount;
-        } else if (transaction.type == 'expense') {
-          // Kebalikan expense (ditambah)
-          newBalance += transaction.amount;
-        }
-
-        // Update ke saldo yang direstore
-        tx.set(userRef, {'balance': newBalance}, SetOptions(merge: true));
-
-        // Hapus dokumen transaksi
-        tx.delete(txnRef);
-      });
-
-      Get.snackbar(
-        'Berhasil',
-        'Transaksi berhasil dihapus!',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Gagal',
-        'Terjadi kesalahan saat menghapus transaksi: $e',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  }
+  // (Old deleteTransaction dihapus karena sudah digantikan oleh fungsi atomic di atas)
 }

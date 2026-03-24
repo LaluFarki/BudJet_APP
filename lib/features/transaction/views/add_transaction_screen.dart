@@ -6,7 +6,15 @@ import '../controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 
 class AddTransactionScreen extends StatelessWidget {
-  AddTransactionScreen({Key? key}) : super(key: key);
+  AddTransactionScreen({Key? key}) : super(key: key) {
+    final TransactionModel? existingTx = Get.arguments as TransactionModel?;
+    if (existingTx != null) {
+      _titleController.text = existingTx.title;
+      _amountController.text = existingTx.amount.toInt().toString();
+      _selectedCategory.value = existingTx.kategori;
+      _selectedDate.value = existingTx.date;
+    }
+  }
 
   final TransactionController txController = Get.find<TransactionController>();
   final _formKey = GlobalKey<FormState>();
@@ -45,26 +53,35 @@ class AddTransactionScreen extends StatelessWidget {
   void _submit() async {
     if (_formKey.currentState!.validate()) {
       _isLoading.value = true;
+      final TransactionModel? existingTx = Get.arguments as TransactionModel?;
 
       // Hapus karakter non-digit agar parse uang aman
       final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
       
       final newTransaction = TransactionModel(
-        id: '', // Diabaikan oleh Firestore create auto id
+        id: existingTx?.id ?? '', // Diabaikan oleh Firestore create auto id jika kosong
         amount: double.parse(cleanAmount.isEmpty ? '0' : cleanAmount),
-        createdAt: DateTime.now(),
+        createdAt: existingTx?.createdAt ?? DateTime.now(),
         date: _selectedDate.value,
         kategori: _selectedCategory.value,
         note: '', // Desain baru tidak ada note
         title: _titleController.text,
-        type: 'expense', // default expense buat add pengeluaran mock-up
+        type: existingTx?.type ?? 'expense', // Pertahankan tipe asli
       );
 
-      await txController.addTransaction(newTransaction);
+      if (existingTx != null) {
+        await txController.updateTransaction(existingTx, newTransaction);
+      } else {
+        await txController.addTransaction(newTransaction);
+      }
 
       _isLoading.value = false;
-      // Pindah ke Success Screen kirim data
-      Get.offNamed('/success-tx', arguments: newTransaction);
+      if (existingTx != null) {
+        Get.back(); // Kembali ke halaman history sesudah edit
+      } else {
+        // Pindah ke Success Screen kirim data
+        Get.offNamed('/success-tx', arguments: newTransaction);
+      }
     }
   }
 
@@ -79,9 +96,9 @@ class AddTransactionScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
           onPressed: () => Get.back(),
         ),
-        title: const Text(
-          'Tambah Transaksi',
-          style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 18),
+        title: Text(
+          Get.arguments != null ? 'Edit Transaksi' : 'Tambah Transaksi',
+          style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
       ),
@@ -244,10 +261,10 @@ class AddTransactionScreen extends StatelessWidget {
                 const Spacer(),
 
                 // === Teks Sudah Cocok? ===
-                const Center(
+                Center(
                   child: Text(
-                    'Sudah Cocok?',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark, fontSize: 14),
+                    Get.arguments != null ? 'Simpan Perubahan?' : 'Sudah Cocok?',
+                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark, fontSize: 14),
                   ),
                 ),
                 const SizedBox(height: 12),

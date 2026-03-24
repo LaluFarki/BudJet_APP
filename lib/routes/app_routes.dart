@@ -11,6 +11,7 @@ import '../features/history/views/history_screen.dart';
 import '../features/riwayat_transaksi/views/riwayat_transaksi_screen.dart';
 import '../features/transaction/views/add_transaction_screen.dart';
 import '../features/transaction/views/success_transaction_screen.dart';
+import '../features/transaction/views/today_transactions_screen.dart';
 
 class AppRoutes {
   // Membuat nama route untuk halaman home
@@ -23,6 +24,7 @@ class AppRoutes {
   // [PLAYGROUND] Route sementara — hapus setelah frontend jadi
   static const String playground = '/playground';
   static const String riwayatTransaksi = '/riwayat-transaksi';
+  static const String todayTx = '/today-tx';
   static const String addTx = '/add-tx';
   static const String successTx = '/success-tx';
 
@@ -53,6 +55,7 @@ class AppRoutes {
       // [PLAYGROUND] Hapus baris ini setelah frontend jadi
       // playground: (context) => const AlgoritmaPlayground(),
       riwayatTransaksi: (context) => const RiwayatTransaksiScreen(),
+      todayTx: (context) => const TodayTransactionsScreen(),
       addTx: (context) => AddTransactionScreen(),
       successTx: (context) => const SuccessTransactionScreen(),
     };

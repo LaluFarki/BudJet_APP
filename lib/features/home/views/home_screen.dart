@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../transaction/controllers/transaction_controller.dart';
 
@@ -19,7 +20,9 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: AppColors.backgroundLight,
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(), // Mematikan efek overscroll stretch (karet) bawaan Android
+          // ClampingScrollPhysics menahan layar secara kaku saat mentok di atas/bawah
+          // dan TIDAK AKAN bisa ditarik/mantul jika datanya masih sedikit (muat di layar).
+          physics: const ClampingScrollPhysics(), 
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,10 +81,10 @@ class HomeScreen extends StatelessWidget {
                     "Riwayat Transaksi Hari Ini",
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                  // Tombol navigasi ke RiwayatTransaksiScreen
+                  // Tombol navigasi ke TodayTransactionsScreen
                   GestureDetector(
                     onTap: () =>
-                        Navigator.pushNamed(context, '/riwayat-transaksi'),
+                        Get.toNamed('/today-tx'),
                     child: const Text(
                       "Lihat Semua",
                       style: TextStyle(
@@ -124,9 +127,34 @@ class HomeScreen extends StatelessWidget {
                     final tx = todayTxs[index];
                     final isIncome = tx.type == 'income';
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
+                    return Slidable(
+                      key: ValueKey(tx.id),
+                      endActionPane: ActionPane(
+                        motion: const ScrollMotion(),
+                        children: [
+                          SlidableAction(
+                            onPressed: (context) {
+                              Get.toNamed('/add-tx', arguments: tx); 
+                            },
+                            backgroundColor: const Color(0xFFDCE775),
+                            foregroundColor: AppColors.textDark,
+                            icon: Icons.edit_outlined,
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          SlidableAction(
+                            onPressed: (context) {
+                              txController.deleteTransaction(tx);
+                            },
+                            backgroundColor: const Color(0xFFFF697A),
+                            foregroundColor: Colors.white,
+                            icon: Icons.delete_outline,
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ],
+                      ),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(15),
@@ -193,10 +221,11 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                    );
-                  },
-                );
-              }),
+                    ),
+                  );
+                },
+              );
+            }),
               
               // Jarak pengaman di paling bawah agar item terakhir tidak tertimpa 
               // oleh bar navigasi putih di bagian bawah layar.
