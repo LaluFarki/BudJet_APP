@@ -7,6 +7,7 @@ import '../features/home/views/main_screen.dart';
 // Mengimpor file HistoryScreen yang ada di folder features/history/views
 // File ini berisi tampilan halaman riwayat transaksi
 import '../features/history/views/history_screen.dart';
+import '../features/riwayat_transaksi/views/riwayat_transaksi_screen.dart';
 
 // Class AppRoutes digunakan sebagai pusat pengaturan navigasi aplikasi
 // Semua halaman (screen) yang bisa dibuka di aplikasi didaftarkan di sini
@@ -18,6 +19,7 @@ class AppRoutes {
   // Membuat nama route untuk halaman history
   // route ini akan digunakan ketika ingin membuka halaman riwayat
   static const String history = '/history';
+  static const String riwayatTransaksi = '/riwayat-transaksi';
 
   // Method ini mengembalikan Map yang berisi daftar route aplikasi
   // Map ini berisi pasangan antara nama route (String)
@@ -42,6 +44,7 @@ class AppRoutes {
       // Di file history_screen.dart ada:
       // class HistoryScreen extends StatelessWidget
       history: (context) => const HistoryScreen(),
+      riwayatTransaksi: (context) => const RiwayatTransaksiScreen(),
     };
   }
 }
