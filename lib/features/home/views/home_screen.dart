@@ -19,6 +19,7 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: AppColors.backgroundLight,
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(), // Mematikan efek overscroll stretch (karet) bawaan Android
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,6 +197,10 @@ class HomeScreen extends StatelessWidget {
                   },
                 );
               }),
+              
+              // Jarak pengaman di paling bawah agar item terakhir tidak tertimpa 
+              // oleh bar navigasi putih di bagian bawah layar.
+              const SizedBox(height: 100),
             ],
           ),
         ),
