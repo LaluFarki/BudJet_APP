@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_helpers.dart';
 import '../controllers/transaction_controller.dart';
 
 class TodayTransactionsScreen extends StatelessWidget {
@@ -38,6 +39,8 @@ class TodayTransactionsScreen extends StatelessWidget {
           itemBuilder: (context, index) {
             final tx = todayTxs[index];
             final isIncome = tx.type == 'income';
+            final catIcon = AppHelpers.getCategoryIcon(tx.kategori, tx.title);
+            final catColor = AppHelpers.getCategoryColor(tx.kategori, tx.title);
 
             return Slidable(
               key: ValueKey(tx.id),
@@ -83,12 +86,12 @@ class TodayTransactionsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isIncome ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
+                      color: catColor.withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                      color: isIncome ? Colors.green : Colors.red,
+                      catIcon,
+                      color: catColor,
                     ),
                   ),
                   const SizedBox(width: 15),
@@ -103,7 +106,7 @@ class TodayTransactionsScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    isIncome ? '+ Rp${tx.amount.toStringAsFixed(0)}' : '- Rp${tx.amount.toStringAsFixed(0)}',
+                    isIncome ? '+ ${AppHelpers.formatCurrency(tx.amount)}' : '- ${AppHelpers.formatCurrency(tx.amount)}',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isIncome ? Colors.green : Colors.red),
                   ),
                 ],

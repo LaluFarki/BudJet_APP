@@ -42,6 +42,7 @@ import 'package:flutter/material.dart';
 //
 import 'package:get/get.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/app_helpers.dart';
 import '../../../transaction/controllers/transaction_controller.dart';
 
 // ======================================================================
@@ -176,7 +177,7 @@ class ExpenseSummary extends StatelessWidget {
                 Obx(() {
                   final txCtrl = Get.find<TransactionController>();
                   return Text(
-                    'Rp${txCtrl.todayExpense.toStringAsFixed(0)}',
+                    AppHelpers.formatCurrency(txCtrl.todayExpense),
                     style: const TextStyle(
                       color: AppColors.textDark,
                       fontSize: 22,
@@ -245,7 +246,7 @@ class ExpenseSummary extends StatelessWidget {
                 Obx(() {
                   final txCtrl = Get.find<TransactionController>();
                   return Text(
-                    'Rp${txCtrl.totalExpense.toStringAsFixed(0)}',
+                    AppHelpers.formatCurrency(txCtrl.totalExpense),
                     style: const TextStyle(
                       color: AppColors.textDark,
                       fontSize: 22,

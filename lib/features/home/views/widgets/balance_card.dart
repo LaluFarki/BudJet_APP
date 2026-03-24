@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/app_helpers.dart';
 import '../../../transaction/controllers/transaction_controller.dart';
 import '../../../transaction/models/transaction_model.dart';
 
@@ -184,7 +185,7 @@ class BalanceCard extends StatelessWidget {
                 }
 
                 return Text(
-                  'Rp${txCtrl.userBalance.value.toStringAsFixed(0)}',
+                  AppHelpers.formatCurrency(txCtrl.userBalance.value),
                   style: const TextStyle(
                     color: AppColors.textDark,
                     fontSize: 32,
