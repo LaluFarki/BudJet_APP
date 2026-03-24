@@ -16,12 +16,12 @@ import 'package:flutter_application_1/features/algoritma_pembagian/utils/date_fo
 /// 4. Kalau sudah oke, kembalikan home: ke widget aslinya
 /// ─────────────────────────────────────────────────────────────
 
-void main() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: AlgoritmaPlayground(),
-  ));
-}
+// void main() {
+//   runApp(const MaterialApp(
+//     debugShowCheckedModeBanner: false,
+//     home: AlgoritmaPlayground(),
+//   ));
+// }
 
 class AlgoritmaPlayground extends StatefulWidget {
   const AlgoritmaPlayground({super.key});

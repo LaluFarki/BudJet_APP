@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/features/algoritma_pembagian/algoritma_playground.dart';
 
 // Mengimpor file MainScreen yang ada di folder features/home/views
 // File ini berisi tampilan halaman utama aplikasi
@@ -46,8 +47,8 @@ class AppRoutes {
       history: (context) => const HistoryScreen(),
 
       // [PLAYGROUND] Hapus baris ini setelah frontend jadi
-      playground: (context) => const AlgoritmaPlayground(),
-      riwayatTransaksi: (context) => const RiwayatTransaksiScreen(),
+      // playground: (context) => const AlgoritmaPlayground(),
+      // riwayatTransaksi: (context) => const RiwayatTransaksiScreen(),
     };
   }
 }
