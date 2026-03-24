@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../core/constants/app_colors.dart';
-// import '../../../core/widgets/custom_bottom_nav.dart'; <-- HAPUS BARIS INI
+import '../../transaction/controllers/transaction_controller.dart';
 
 import 'widgets/balance_card.dart';
 import 'widgets/expense_summary.dart';
@@ -11,6 +12,9 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Inisialisasi controller GetX
+    final txController = Get.put(TransactionController());
+
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       body: SafeArea(

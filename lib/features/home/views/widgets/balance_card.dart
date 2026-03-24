@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../transaction/controllers/transaction_controller.dart';
 
 class BalanceCard extends StatelessWidget {
   const BalanceCard({Key? key}) : super(key: key);
@@ -24,14 +26,18 @@ class BalanceCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Rp425.000',
-                style: TextStyle(
-                  color: AppColors.textDark,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Obx(() {
+                final txCtrl = Get.find<TransactionController>();
+                // Menampilkan saldo realtime (contoh format: Rp425000), bisa diformat lebih rapi nanti
+                return Text(
+                  'Rp${txCtrl.userBalance.value.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    color: AppColors.textDark,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              }),
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
