@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1015990778323",
+    "project_id": "pdbl-project-d61da",
+    "storage_bucket": "pdbl-project-d61da.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1015990778323:android:e2236eaa465a013ab65726",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIoB7BTYQ1MXkIp3un75O2wiZ-9NWJ9ts"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
