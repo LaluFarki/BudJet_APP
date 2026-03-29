@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false, // Menghilangkan pita 'DEBUG'
       theme: ThemeData(fontFamily: 'Roboto'),
       // MENGGUNAKAN APP ROUTES SEBAGAI NAVIGASI UTAMA
-      initialRoute: AppRoutes.onboarding,
+      initialRoute: AppRoutes.home,
       routes: AppRoutes.getRoutes(),
     );
   }
