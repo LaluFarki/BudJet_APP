@@ -13,11 +13,12 @@ dependencies:
   intl: ^0.19.0
   get: ^4.6.6              # State management & navigasi
   firebase_core: ^3.15.2    # Koneksi dasar Firebase
-  cloud_firestore: ^5.0.0  # Database untuk simpan transaksi
+  cloud_firestore: ^5.6.12  # Database untuk simpan transaksi
   csv: ^6.0.0              # Untuk fitur download CSV (Target 10)
   flutter_slidable: ^3.1.1
   shared_preferences: ^2.2.3
   image_picker: ^1.1.2
+  firebase_auth: ^5.7.0
 
 dev_dependencies:
   flutter_test:
