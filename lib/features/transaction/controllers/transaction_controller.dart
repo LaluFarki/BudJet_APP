@@ -87,7 +87,7 @@ class TransactionController extends GetxController {
         title: isIncome ? 'Bonus $i' : 'Pengeluaran $i',
         type: isIncome ? 'income' : 'expense',
       );
-      await addTransaction(dummyTx);
+      await addTransaction(dummyTx, showSnackbar: false);
     }
     Get.snackbar('Sukses', '15 Data Dummy berhasil disuntikkan ke Firebase!', snackPosition: SnackPosition.BOTTOM);
   }
@@ -194,7 +194,7 @@ class TransactionController extends GetxController {
   }
 
   /// Menambahkan Transaksi baru sekaligus Update Saldo Otomatis
-  Future<void> addTransaction(TransactionModel transaction) async {
+  Future<void> addTransaction(TransactionModel transaction, {bool showSnackbar = true}) async {
     try {
       // Menggunakan runTransaction agar proses Read & Write dilakukan secara bersamaan dengan aman
       await _firestore.runTransaction((Transaction tx) async {
@@ -227,11 +227,13 @@ class TransactionController extends GetxController {
         tx.set(txnRef, txMap);
       });
 
-      Get.snackbar(
-        'Berhasil',
-        'Transaksi sukses ditambahkan!',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (showSnackbar) {
+        Get.snackbar(
+          'Berhasil',
+          'Transaksi sukses ditambahkan!',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     } catch (e) {
       Get.snackbar(
         'Gagal',

@@ -4,6 +4,8 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_helpers.dart';
 import '../../transaction/controllers/transaction_controller.dart';
+import '../../profile/controllers/profile_controller.dart';
+import 'dart:io';
 
 import 'widgets/balance_card.dart';
 import 'widgets/expense_summary.dart';
@@ -16,6 +18,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Inisialisasi controller GetX
     Get.put(TransactionController());
+    final profileCtrl = Get.put(ProfileController());
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -23,36 +26,37 @@ class HomeScreen extends StatelessWidget {
         child: SingleChildScrollView(
           // ClampingScrollPhysics menahan layar secara kaku saat mentok di atas/bawah
           // dan TIDAK AKAN bisa ditarik/mantul jika datanya masih sedikit (muat di layar).
-          physics: const ClampingScrollPhysics(), 
+          physics: const ClampingScrollPhysics(),
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Header (Nama & Foto)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
+                  Obx(() => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         'Selamat Pagi',
                         style: TextStyle(color: AppColors.textGrey),
                       ),
                       Text(
-                        'Smith Joie',
-                        style: TextStyle(
+                        profileCtrl.name.value,
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
-                  ),
-                  const CircleAvatar(
-                    backgroundImage: NetworkImage(
-                      'https://via.placeholder.com/150',
-                    ),
-                  ),
+                  )),
+                  Obx(() => CircleAvatar(
+                    radius: 25,
+                    backgroundColor: Colors.white,
+                    backgroundImage: profileCtrl.profileImagePath.value.isNotEmpty
+                        ? FileImage(File(profileCtrl.profileImagePath.value)) as ImageProvider
+                        : const AssetImage('assets/profile.jpg'),
+                  )),
                 ],
               ),
               const SizedBox(height: 20),
@@ -84,8 +88,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   // Tombol navigasi ke TodayTransactionsScreen
                   GestureDetector(
-                    onTap: () =>
-                        Get.toNamed('/today-tx'),
+                    onTap: () => Get.toNamed('/today-tx'),
                     child: const Text(
                       "Lihat Semua",
                       style: TextStyle(
@@ -113,7 +116,10 @@ class HomeScreen extends StatelessWidget {
                       padding: EdgeInsets.all(30.0),
                       child: Text(
                         'Belum ada transaksi hari ini.',
-                        style: TextStyle(color: AppColors.textGrey, fontStyle: FontStyle.italic),
+                        style: TextStyle(
+                          color: AppColors.textGrey,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   );
@@ -127,8 +133,14 @@ class HomeScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final tx = todayTxs[index];
                     final isIncome = tx.type == 'income';
-                    final catIcon = AppHelpers.getCategoryIcon(tx.kategori, tx.title);
-                    final catColor = AppHelpers.getCategoryColor(tx.kategori, tx.title);
+                    final catIcon = AppHelpers.getCategoryIcon(
+                      tx.kategori,
+                      tx.title,
+                    );
+                    final catColor = AppHelpers.getCategoryColor(
+                      tx.kategori,
+                      tx.title,
+                    );
 
                     return Slidable(
                       key: ValueKey(tx.id),
@@ -137,7 +149,7 @@ class HomeScreen extends StatelessWidget {
                         children: [
                           SlidableAction(
                             onPressed: (context) {
-                              Get.toNamed('/add-tx', arguments: tx); 
+                              Get.toNamed('/add-tx', arguments: tx);
                             },
                             backgroundColor: const Color(0xFFDCE775),
                             foregroundColor: AppColors.textDark,
@@ -158,75 +170,72 @@ class HomeScreen extends StatelessWidget {
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          // Icon Kategori Spesifik
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: catColor.withOpacity(0.15),
-                              shape: BoxShape.circle,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
                             ),
-                            child: Icon(
-                              catIcon,
-                              color: catColor,
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            // Icon Kategori Spesifik
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: catColor.withOpacity(0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(catIcon, color: catColor),
                             ),
-                          ),
-                          const SizedBox(width: 15),
-                          // Detail Transaksi
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  tx.title,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                            const SizedBox(width: 15),
+                            // Detail Transaksi
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    tx.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  tx.kategori,
-                                  style: const TextStyle(
-                                    color: AppColors.textGrey,
-                                    fontSize: 12,
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    tx.kategori,
+                                    style: const TextStyle(
+                                      color: AppColors.textGrey,
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          // Nominal Transaksi
-                          Text(
-                            isIncome
-                                ? '+ ${AppHelpers.formatCurrency(tx.amount)}'
-                                : '- ${AppHelpers.formatCurrency(tx.amount)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: isIncome ? Colors.green : Colors.red,
+                            // Nominal Transaksi
+                            Text(
+                              isIncome
+                                  ? '+ ${AppHelpers.formatCurrency(tx.amount)}'
+                                  : '- ${AppHelpers.formatCurrency(tx.amount)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: isIncome ? Colors.green : Colors.red,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              );
-            }),
-              
-              // Jarak pengaman di paling bawah agar item terakhir tidak tertimpa 
+                    );
+                  },
+                );
+              }),
+
+              // Jarak pengaman di paling bawah agar item terakhir tidak tertimpa
               // oleh bar navigasi putih di bagian bawah layar.
               const SizedBox(height: 100),
             ],
