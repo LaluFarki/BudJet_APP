@@ -4,7 +4,7 @@ class TombolUtama extends StatelessWidget {
   final String teks;
   final VoidCallback onTap;
 
-  const TombolUtama({
+  const TombolUtama({super.key, 
     required this.teks,
     required this.onTap,
   });

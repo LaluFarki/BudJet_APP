@@ -6,7 +6,7 @@ import '../../../transaction/controllers/transaction_controller.dart';
 import '../../../transaction/models/transaction_model.dart';
 
 class BalanceCard extends StatelessWidget {
-  const BalanceCard({Key? key}) : super(key: key);
+  const BalanceCard({super.key});
 
   void _showAddIncomeDialog(BuildContext context, TransactionController txCtrl) {
     final TextEditingController amountController = TextEditingController();
@@ -31,7 +31,7 @@ class BalanceCard extends StatelessWidget {
                 Switch(
                   value: isCorrectionMode.value,
                   onChanged: (val) => isCorrectionMode.value = val,
-                  activeColor: AppColors.primaryGreen,
+                  activeThumbColor: AppColors.primaryGreen,
                 ),
               ],
             ),

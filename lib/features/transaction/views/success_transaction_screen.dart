@@ -6,7 +6,7 @@ import '../models/transaction_model.dart';
 import '../controllers/transaction_controller.dart';
 
 class SuccessTransactionScreen extends StatelessWidget {
-  const SuccessTransactionScreen({Key? key}) : super(key: key);
+  const SuccessTransactionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

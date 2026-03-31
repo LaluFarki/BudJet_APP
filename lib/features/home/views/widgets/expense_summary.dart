@@ -65,7 +65,7 @@ import '../../../transaction/controllers/transaction_controller.dart';
 
 class ExpenseSummary extends StatelessWidget {
   // Constructor standar Flutter
-  const ExpenseSummary({Key? key}) : super(key: key);
+  const ExpenseSummary({super.key});
 
   @override
   Widget build(BuildContext context) {

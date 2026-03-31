@@ -141,8 +141,9 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
 
   Color _getColor(String kategori) {
     final k = kategori.toLowerCase();
-    if (k.contains('makan') || k.contains('minum'))
+    if (k.contains('makan') || k.contains('minum')) {
       return Colors.orange.shade200;
+    }
     if (k.contains('transport')) return Colors.blue.shade200;
     if (k.contains('hibur')) return Colors.purple.shade200;
     if (k.contains('tabung')) return Colors.green.shade200;

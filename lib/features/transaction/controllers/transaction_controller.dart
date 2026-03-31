@@ -159,7 +159,7 @@ class TransactionController extends GetxController {
       Get.snackbar('Tersimpan', 'Perubahan transaksi berhasil disimpan!', snackPosition: SnackPosition.BOTTOM);
     } catch (e) {
       Get.snackbar('Gagal', 'Terjadi kesalahan edit: $e', snackPosition: SnackPosition.BOTTOM);
-      throw e; 
+      rethrow; 
     }
   }
 

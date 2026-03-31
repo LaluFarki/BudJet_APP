@@ -26,6 +26,7 @@
 /// [BudgetController]      — State budget aktif bulan ini
 /// [TransactionController] — Tambah/hapus transaksi, ringkasan
 /// [CategoryController]    — Atur alokasi & realisasi per kategori
+library;
 
 // Models
 export 'models/budget_model.dart';

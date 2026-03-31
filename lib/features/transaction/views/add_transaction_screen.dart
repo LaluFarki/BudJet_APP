@@ -7,7 +7,7 @@ import '../controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 
 class AddTransactionScreen extends StatelessWidget {
-  AddTransactionScreen({Key? key}) : super(key: key) {
+  AddTransactionScreen({super.key}) {
     final TransactionModel? existingTx = Get.arguments as TransactionModel?;
     if (existingTx != null) {
       _titleController.text = existingTx.title;

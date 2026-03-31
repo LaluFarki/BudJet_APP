@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../../../../core/constants/app_colors.dart';
 
 class FinanceMenu extends StatelessWidget {
-  const FinanceMenu({Key? key}) : super(key: key);
+  const FinanceMenu({super.key});
 
   @override
   Widget build(BuildContext context) {

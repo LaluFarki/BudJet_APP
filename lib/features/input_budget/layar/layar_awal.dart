@@ -3,6 +3,8 @@ import '../komponen/tombol_utama.dart';
 import 'layar_form_anggaran.dart';
 
 class LayarAwal extends StatelessWidget {
+  const LayarAwal({super.key});
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;

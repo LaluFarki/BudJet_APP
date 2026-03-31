@@ -238,7 +238,7 @@ class _AlgoritmaPlaygroundState extends State<AlgoritmaPlayground> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<KategoriTransaksi>(
-                  value: _kategoriDipilih,
+                  initialValue: _kategoriDipilih,
                   decoration: _inputDecoration('Kategori'),
                   items: KategoriTransaksi.values
                       .map((k) => DropdownMenuItem(
