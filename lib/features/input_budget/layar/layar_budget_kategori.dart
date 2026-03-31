@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 // Sesuaikan dengan nama package kamu
 import 'package:flutter_application_1/features/algoritma_pembagian/algoritma_pembagian.dart';
 import 'layar_analisis_budget.dart';
+import '../../../core/constants/app_colors.dart';
 
 /// Layar 2 dari 2: Bagi budget per kategori + validasi + simpan ke Firebase.
 ///
@@ -153,8 +154,54 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   // LANJUT KE HALAMAN ANALISIS
   // ─────────────────────────────────────────
 
-  void _lanjut() {
-    if (!_isValid) return;
+  void _simpan() {
+    final double totalDialokasikan = _totalDialokasikan;
+    final double sisa = widget.budgetBulanan - totalDialokasikan;
+    if (sisa > 0) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppColors.cardRed,
+          title: const Text(
+            'Saldo Masih Tersisa',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'Saldo Anda masih tersisa Rp.${_currencyFormat.format(sisa).replaceAll("Rp ", "").trim()}, alokasikan semua saldo anda untuk bisa simpan',
+            style: const TextStyle(color: Colors.white),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      return;
+    } else if (sisa < 0) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppColors.cardRed,
+          title: const Text(
+            'Kelebihan Alokasi',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'Nominal yang anda masukkan di kategori melebihi sebanyak Rp.${_currencyFormat.format(sisa.abs()).replaceAll("Rp ", "").trim()} dari saldo utama',
+            style: const TextStyle(color: Colors.white),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
 
     // Kumpulkan alokasi per kategori
     final Map<String, double> allocations = {};
@@ -417,23 +464,20 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
 
               const SizedBox(height: 15),
 
-              // ── Tombol Lanjut ──
-              // Aktif hanya kalau _isValid (sisa = 0)
+              // ── Tombol Simpan ──
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isValid ? _lanjut : null,
+                  onPressed: _simpan,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isValid
-                        ? const Color(0xFFD6E85A)
-                        : Colors.grey.shade300,
+                    backgroundColor: Color(0xFFD6E85A),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: const Text('Lanjut →', style: TextStyle(fontSize: 22)),
+                  child: const Text('Simpan', style: TextStyle(fontSize: 22)),
                 ),
               ),
 
