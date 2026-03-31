@@ -1,9 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import '../models/transaction_model.dart';
 
 class TransactionController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  String get _uid => FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+  DocumentReference get _userDoc => _firestore.collection('users').doc(_uid);
+  CollectionReference get _txnCollection => _userDoc.collection('transactions');
 
   // State Reaktif (Observable)
   var transactions = <TransactionModel>[].obs;
@@ -53,7 +58,7 @@ class TransactionController extends GetxController {
   /// Update Saldo Utama Secara Manual (Topup/Koreksi)
   Future<void> updateBalance(double newBalance) async {
     try {
-      await _firestore.collection('users').doc('users_farki').set(
+      await _userDoc.set(
         {'balance': newBalance},
         SetOptions(merge: true),
       );
@@ -95,14 +100,14 @@ class TransactionController extends GetxController {
   /// FUNGSI HAPUS: Menghapus transaksi dan otomatis merekap saldo (Refund/Deduct) secara Atomic
   Future<void> deleteTransaction(TransactionModel tx) async {
     try {
-      final userDocRef = _firestore.collection('users').doc('users_farki');
-      final txDocRef = _firestore.collection('transactions').doc(tx.id);
+      final txDocRef = _txnCollection.doc(tx.id);
 
       await _firestore.runTransaction((transaction) async {
-        final userSnapshot = await transaction.get(userDocRef);
+        final userSnapshot = await transaction.get(_userDoc);
         double currentBalance = 0.0;
-        if (userSnapshot.exists && userSnapshot.data()!.containsKey('balance')) {
-          currentBalance = (userSnapshot.data()!['balance'] as num).toDouble();
+        if (userSnapshot.exists) {
+          final data = userSnapshot.data() as Map<String, dynamic>? ?? {};
+          currentBalance = (data['balance'] ?? 0).toDouble();
         }
 
         // Hitung saldo baru (karena dihapus, efeknya DIBALIK)
@@ -113,7 +118,7 @@ class TransactionController extends GetxController {
           newBalance -= tx.amount; // Uang ditarik balik
         }
 
-        transaction.update(userDocRef, {'balance': newBalance});
+        transaction.update(_userDoc, {'balance': newBalance});
         transaction.delete(txDocRef);
       });
 
@@ -126,14 +131,14 @@ class TransactionController extends GetxController {
   /// FUNGSI UBAH: Menyimpan perubahan transaksi dan menghitung selisih nominal ke Saldo secara Atomic
   Future<void> updateTransaction(TransactionModel oldTx, TransactionModel newTx) async {
     try {
-      final userDocRef = _firestore.collection('users').doc('users_farki');
-      final txDocRef = _firestore.collection('transactions').doc(oldTx.id);
+      final txDocRef = _txnCollection.doc(oldTx.id);
 
       await _firestore.runTransaction((transaction) async {
-        final userSnapshot = await transaction.get(userDocRef);
+        final userSnapshot = await transaction.get(_userDoc);
         double currentBalance = 0.0;
-        if (userSnapshot.exists && userSnapshot.data()!.containsKey('balance')) {
-          currentBalance = (userSnapshot.data()!['balance'] as num).toDouble();
+        if (userSnapshot.exists) {
+          final data = userSnapshot.data() as Map<String, dynamic>? ?? {};
+          currentBalance = (data['balance'] ?? 0).toDouble();
         }
 
         double newBalance = currentBalance;
@@ -152,7 +157,7 @@ class TransactionController extends GetxController {
           newBalance += newTx.amount;
         }
 
-        transaction.update(userDocRef, {'balance': newBalance});
+        transaction.update(_userDoc, {'balance': newBalance});
         transaction.update(txDocRef, newTx.toFirestore());
       });
 
@@ -165,8 +170,7 @@ class TransactionController extends GetxController {
 
   /// Mengambil data transaksi secara real-time dari Firestore
   void _listenToTransactions() {
-    _firestore
-        .collection('transactions')
+    _txnCollection
         .orderBy('date', descending: true) // Urutkan utama dari tanggal
         .snapshots()
         .listen((QuerySnapshot snapshot) {
@@ -187,9 +191,7 @@ class TransactionController extends GetxController {
 
   /// Mengambil data saldo user_farki secara real-time
   void _listenToBalance() {
-    _firestore
-        .collection('users')
-        .doc('users_farki')
+    _userDoc
         .snapshots()
         .listen((DocumentSnapshot doc) {
       if (doc.exists) {
@@ -207,9 +209,9 @@ class TransactionController extends GetxController {
     try {
       // Menggunakan runTransaction agar proses Read & Write dilakukan secara bersamaan dengan aman
       await _firestore.runTransaction((Transaction tx) async {
-        DocumentReference userRef = _firestore.collection('users').doc('users_farki');
+        DocumentReference userRef = _userDoc;
         // Membuat referensi dokumen baru di transaksi
-        DocumentReference txnRef = _firestore.collection('transactions').doc();
+        DocumentReference txnRef = _txnCollection.doc();
 
         DocumentSnapshot userSnapshot = await tx.get(userRef);
 

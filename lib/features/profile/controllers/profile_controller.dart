@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileController extends GetxController {
   // Reactive states
@@ -25,8 +27,18 @@ class ProfileController extends GetxController {
       email.value = prefs.getString('profile_email') ?? 'rian@gmail.com';
       password.value = prefs.getString('profile_password') ?? '***********';
       profileImagePath.value = prefs.getString('profile_image_path') ?? '';
+
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        if (doc.exists) {
+          final data = doc.data() ?? {};
+          if (data.containsKey('name')) name.value = data['name'];
+          if (data.containsKey('profilePic')) profileImagePath.value = data['profilePic'];
+        }
+      }
     } catch (e) {
-      print("Error loading shared preferences: $e");
+      print("Error loading profile data: $e");
     }
   }
 
@@ -35,6 +47,11 @@ class ProfileController extends GetxController {
     name.value = newName;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profile_name', newName);
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({'name': newName}, SetOptions(merge: true));
+    }
   }
 
   // Update Email
@@ -61,6 +78,11 @@ class ProfileController extends GetxController {
         
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('profile_image_path', image.path);
+
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid != null) {
+          await FirebaseFirestore.instance.collection('users').doc(uid).set({'profilePic': image.path}, SetOptions(merge: true));
+        }
         
         Get.snackbar(
           'Tersimpan',

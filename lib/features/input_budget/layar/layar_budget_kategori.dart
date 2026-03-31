@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get/get.dart';
 
 // Sesuaikan dengan nama package kamu
 import 'package:flutter_application_1/features/algoritma_pembagian/algoritma_pembagian.dart';
@@ -163,9 +165,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) throw Exception('User belum login');
 
-      // Key dokumen: "yyyy-MM" misal "2025-07"
-      final bulanKey =
-          '${widget.bulan.year}-${widget.bulan.month.toString().padLeft(2, '0')}';
+      // Remove unused bulanKey
 
       // Susun data kategori
       final List<Map<String, dynamic>> categories = [];
@@ -181,23 +181,22 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
         });
       }
 
-      // Data yang disimpan ke Firestore
-      // Struktur: budgets/{userId}/{yyyy-MM}
+      // Data yang disimpan ke Firestore digabung ke users/{userId}
       await FirebaseFirestore.instance
-          .collection('budgets')
+          .collection('users')
           .doc(userId)
-          .collection(bulanKey)
-          .doc('data')
           .set({
             'budgetBulanan': widget.budgetBulanan,
-            // budget harian otomatis — langsung dari BudgetController
             'budgetHarian': _budgetCtrl.budgetHarian,
             'bulan': widget.bulan.toIso8601String(),
             'categories': categories,
-            // totalPengeluaran dimulai dari 0, nanti diupdate saat ada transaksi
-            'totalPengeluaran': 0,
+            'selectedCategories': widget.kategoriList,
             'createdAt': FieldValue.serverTimestamp(),
-          });
+          }, SetOptions(merge: true));
+
+      // Tandai onboarding selesai
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isOnboardingDone', true);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -207,8 +206,8 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
         ),
       );
 
-      // Kembali ke halaman utama setelah simpan
-      Navigator.popUntil(context, (route) => route.isFirst);
+      // Arahkan ke Dasbor (Home) karena onboarding selesai
+      Get.offAllNamed('/');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
