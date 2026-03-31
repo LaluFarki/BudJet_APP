@@ -69,8 +69,8 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   double get _sisaBelumDialokasikan =>
       widget.budgetBulanan - _totalDialokasikan;
 
-  /// True kalau total sudah pas = budgetBulanan (toleransi Rp 0).
-  bool get _isValid => _sisaBelumDialokasikan == 0;
+  /// True kalau total sudah pas = budgetBulanan (toleransi < Rp 1 untuk floating point).
+  bool get _isValid => _sisaBelumDialokasikan.abs() < 1;
 
   // ─────────────────────────────────────────
   // LIFECYCLE
