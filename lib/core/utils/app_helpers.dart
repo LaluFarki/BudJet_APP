@@ -18,7 +18,9 @@ class AppHelpers {
     
     // Pengecekan Khusus berdasarkan Judul (Koreksi & Top-Up)
     if (lowerTitle.contains('koreksi')) return Icons.price_change_outlined;
-    if (lowerTitle.contains('top-up') || lowerTitle.contains('gaji')) return Icons.monetization_on_outlined;
+    if (lowerTitle.contains('top-up') || lowerTitle.contains('gaji') || lowerTitle.contains('tambah saldo')) {
+      return Icons.monetization_on; // Ikon koin mata uang
+    }
 
     // Pengecekan Standar berdasarkan Kategori dari Form AddTransaction
     switch (category) {
@@ -41,7 +43,9 @@ class AppHelpers {
     final lowerTitle = title.toLowerCase();
     
     if (lowerTitle.contains('koreksi')) return Colors.red; // Koreksi saldo selalu merah/pink
-    if (lowerTitle.contains('top-up') || lowerTitle.contains('gaji')) return Colors.green; // Uang masuk hijau
+    if (lowerTitle.contains('top-up') || lowerTitle.contains('gaji') || lowerTitle.contains('tambah saldo')) {
+      return Colors.green; // Uang masuk hijau
+    }
 
     switch (category) {
       case 'Makanan & Minuman':

@@ -97,20 +97,25 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
       await prefs.setString('profile_image_path', profilePic);
 
       // ── Kirim nama ke Firestore (sinkronisasi ringan) ──
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      var uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        final userCredential = await FirebaseAuth.instance.signInAnonymously();
+        uid = userCredential.user?.uid;
+      }
+
       if (uid != null) {
-        await FirebaseFirestore.instance.collection('users').doc(uid).set(
+        // Hapus await agar proses tidak terblokir kalau koneksi internet lambat / Firestore nyangkut
+        FirebaseFirestore.instance.collection('users').doc(uid).set(
           {'name': name, 'profilePic': profilePic},
           SetOptions(merge: true),
-        );
+        ).catchError((e) {
+          debugPrint('Gagal sinkron profile ke Firebase: $e');
+        });
       }
 
       // ── Lanjut ke form budget ──
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LayarFormAnggaran()),
-      );
+      Get.off(() => const LayarFormAnggaran());
     } catch (e) {
       Get.snackbar('Gagal', 'Terjadi kesalahan: $e',
           snackPosition: SnackPosition.BOTTOM);
@@ -217,7 +222,7 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFFD4E858).withOpacity(0.5),
+                                    color: const Color(0xFFD4E858).withValues(alpha: 0.5),
                                     blurRadius: 12,
                                     spreadRadius: 2,
                                   ),
@@ -263,7 +268,7 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),

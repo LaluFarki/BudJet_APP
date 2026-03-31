@@ -50,8 +50,6 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     decimalDigits: 0,
   );
 
-  bool _isSaving = false;
-
   // ─────────────────────────────────────────
   // COMPUTED (dari input user)
   // ─────────────────────────────────────────
@@ -154,7 +152,10 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   // ─────────────────────────────────────────
 
   void _lanjut() {
-    if (!_isValid) return;
+    if (_sisaBelumDialokasikan > 0.5 || _sisaBelumDialokasikan < -0.5) {
+      _showValidationPopup();
+      return;
+    }
 
     // Kumpulkan alokasi per kategori
     final Map<String, double> allocations = {};
@@ -174,6 +175,66 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
           allocations: allocations,
         ),
       ),
+    );
+  }
+
+  void _showValidationPopup() {
+    final sisa = _sisaBelumDialokasikan;
+    final isOver = sisa < -0.5;
+    final judul = isOver ? 'Budget Melebihi Batas' : 'Saldo Masih Tersisa';
+    final pesan = isOver
+        ? 'Total alokasi melebihi budget sebesar ${_currencyFormat.format(sisa.abs().toInt())}. Silakan kurangi alokasi Anda.'
+        : 'Saldo Anda masih tersisa ${_currencyFormat.format(sisa.toInt())},\nalokasikan semua saldo anda untuk bisa simpan';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: const Color(0xFFE57373), // Warna merah/salmon seperti di lampiran
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  judul,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  pesan,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -418,15 +479,13 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
               const SizedBox(height: 15),
 
               // ── Tombol Lanjut ──
-              // Aktif hanya kalau _isValid (sisa = 0)
+              // Selalu aktif secara visual (hijau), validasi ditangani di _lanjut()
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isValid ? _lanjut : null,
+                  onPressed: _lanjut,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isValid
-                        ? const Color(0xFFD6E85A)
-                        : Colors.grey.shade300,
+                    backgroundColor: const Color(0xFFD6E85A),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(

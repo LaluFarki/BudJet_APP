@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/app_helpers.dart';
 import '../../../transaction/controllers/transaction_controller.dart';
@@ -10,37 +12,19 @@ class BalanceCard extends StatelessWidget {
 
   void _showAddIncomeDialog(BuildContext context, TransactionController txCtrl) {
     final TextEditingController amountController = TextEditingController();
-    final TextEditingController sourceController = TextEditingController(text: 'Top-Up Saldo');
-    // State mode koreksi via Obx
-    final RxBool isCorrectionMode = false.obs;
 
     Get.defaultDialog(
-      title: 'Tambah / Koreksi Saldo',
+      title: 'Tambah Budget',
       titleStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
       content: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Obx(() => Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Switch Mode
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Mode Koreksi Aktual?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                Switch(
-                  value: isCorrectionMode.value,
-                  onChanged: (val) => isCorrectionMode.value = val,
-                  activeThumbColor: AppColors.primaryGreen,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isCorrectionMode.value 
-                  ? 'Ketik total saldo fisik Anda saat ini. Sistem otomatis menghitung selisih transaksinya.'
-                  : 'Ketik nominal pemasukan yang direkam sebagai Saldo Masuk.',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            const Text(
+              'Nominal ini akan ditambahkan ke budget bulanan Anda.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -53,17 +37,8 @@ class BalanceCard extends StatelessWidget {
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: sourceController,
-              decoration: const InputDecoration(
-                labelText: 'Keterangan Sumber',
-                hintText: 'Misal: Gaji, Jualan, Tabungan',
-                border: OutlineInputBorder(),
-              ),
-            ),
           ],
-        )),
+        ),
       ),
       textConfirm: 'Simpan',
       textCancel: 'Batal',
@@ -74,150 +49,156 @@ class BalanceCard extends StatelessWidget {
         final cleanText = amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
         final inputAmount = double.tryParse(cleanText);
 
-        if (inputAmount == null) {
+        if (inputAmount == null || inputAmount <= 0) {
           Get.snackbar('Kesalahan', 'Silakan masukkan angka valid', snackPosition: SnackPosition.BOTTOM);
           return;
         }
 
-        double finalAmount = inputAmount;
-        String type = 'income';
-        String title = sourceController.text.isEmpty ? 'Top-Up Saldo' : sourceController.text;
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid == null) return;
 
-        if (isCorrectionMode.value) {
-          final currentBalance = txCtrl.userBalance.value;
-          final diff = inputAmount - currentBalance;
-          if (diff == 0) {
-             Get.back(); // Tidak ada perubahan rill
-             return;
-          } else if (diff > 0) {
-             finalAmount = diff;
-             type = 'income';
-             title = '$title (Koreksi Naik)';
-          } else {
-             finalAmount = diff.abs();
-             type = 'expense';
-             title = '$title (Koreksi Turun)';
-          }
-        } 
+        try {
+          // Tambahkan transaksi baru bertipe 'income' untuk mencatat di riwayat
+          await txCtrl.addTransaction(
+            TransactionModel(
+              id: '', // Diabaikan oleh Firestore addTransaction
+              amount: inputAmount,
+              createdAt: DateTime.now(),
+              date: DateTime.now(),
+              kategori: 'Top Up',
+              note: 'Tambah Saldo dari Home',
+              title: 'Tambah Saldo',
+              type: 'income',
+            ),
+          );
 
-        final newTx = TransactionModel(
-          id: '',
-          title: title,
-          kategori: 'Lainnya',
-          amount: finalAmount,
-          date: DateTime.now(),
-          createdAt: DateTime.now(),
-          note: '',
-          type: type,
-        );
-
-        Get.back(); // Tutup dialog
-        await txCtrl.addTransaction(newTx);
+          Get.back();
+          Get.snackbar('Berhasil', 'Budget ditambahkan ${AppHelpers.formatCurrency(inputAmount)}', snackPosition: SnackPosition.BOTTOM);
+        } catch (e) {
+          Get.snackbar('Gagal', 'Terjadi kesalahan: $e', snackPosition: SnackPosition.BOTTOM);
+        }
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.primaryGreen,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Saldo Saya',
-                style: TextStyle(color: AppColors.textDark, fontSize: 14),
-              ),
-              // Tombol Tambah Pemasukan (+)
-              GestureDetector(
-                onTap: () {
-                  final txCtrl = Get.find<TransactionController>();
-                  _showAddIncomeDialog(context, txCtrl);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.add, size: 16, color: AppColors.textDark),
-                      SizedBox(width: 4),
-                      Text('Tambah', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Obx(() {
-                final txCtrl = Get.find<TransactionController>();
-                // Cek state mata / hide
-                if (!txCtrl.isBalanceVisible.value) {
-                  return const Text(
-                    'Rp ********',
-                    style: TextStyle(
-                      color: AppColors.textDark,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  );
-                }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-                return Text(
-                  AppHelpers.formatCurrency(txCtrl.userBalance.value),
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
+    return StreamBuilder<DocumentSnapshot>(
+      stream: uid != null
+          ? FirebaseFirestore.instance.collection('users').doc(uid).snapshots()
+          : const Stream.empty(),
+      builder: (context, snapshot) {
+        // Ambil budgetBulanan dari Firestore (data budget user)
+        double budgetBulanan = 0;
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+          budgetBulanan = (data['budgetBulanan'] ?? 0).toDouble();
+        }
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.primaryGreen,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Saldo Saya',
+                    style: TextStyle(color: AppColors.textDark, fontSize: 14),
                   ),
-                );
-              }),
-              // Tombol Mata (Hide/Show)
-              GestureDetector(
-                onTap: () {
-                  final txCtrl = Get.find<TransactionController>();
-                  txCtrl.isBalanceVisible.value = !txCtrl.isBalanceVisible.value;
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.1),
-                    shape: BoxShape.circle,
+                  // Tombol Tambah Pemasukan (+)
+                  GestureDetector(
+                    onTap: () {
+                      final txCtrl = Get.find<TransactionController>();
+                      _showAddIncomeDialog(context, txCtrl);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.add, size: 16, color: AppColors.textDark),
+                          SizedBox(width: 4),
+                          Text('Tambah', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Obx(() {
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Obx(() {
                     final txCtrl = Get.find<TransactionController>();
-                    return Icon(
-                      txCtrl.isBalanceVisible.value ? Icons.visibility : Icons.visibility_off, 
-                      color: AppColors.textDark
+                    if (!txCtrl.isBalanceVisible.value) {
+                      return const Text(
+                        'Rp ********',
+                        style: TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    }
+
+                    // Saldo = budgetBulanan - total pengeluaran bulan ini
+                    final sisa = budgetBulanan - txCtrl.totalExpense;
+                    return Text(
+                      AppHelpers.formatCurrency(sisa < 0 ? 0 : sisa),
+                      style: const TextStyle(
+                        color: AppColors.textDark,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
                     );
                   }),
-                ),
+                  // Tombol Mata (Hide/Show)
+                  GestureDetector(
+                    onTap: () {
+                      final txCtrl = Get.find<TransactionController>();
+                      txCtrl.isBalanceVisible.value = !txCtrl.isBalanceVisible.value;
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Obx(() {
+                        final txCtrl = Get.find<TransactionController>();
+                        return Icon(
+                          txCtrl.isBalanceVisible.value ? Icons.visibility : Icons.visibility_off, 
+                          color: AppColors.textDark
+                        );
+                      }),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

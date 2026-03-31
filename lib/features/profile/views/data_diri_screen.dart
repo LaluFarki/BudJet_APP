@@ -25,7 +25,7 @@ class DataDiriScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFD4F069).withOpacity(0.4),
+                      color: const Color(0xFFD4F069).withValues(alpha: 0.4),
                       blurRadius: 25,
                       spreadRadius: 5,
                       offset: const Offset(0, 5),
@@ -112,7 +112,7 @@ class DataDiriScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(100),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFD4F069).withOpacity(0.5),
+                            color: const Color(0xFFD4F069).withValues(alpha: 0.5),
                             blurRadius: 15,
                             spreadRadius: 2,
                             offset: const Offset(0, 5),
@@ -211,18 +211,6 @@ class DataDiriScreen extends StatelessWidget {
                 value: profileCtrl.name.value,
                 onEdit: () => _showEditDialog(context, 'Nama', profileCtrl.name.value, (val) => profileCtrl.updateName(val)),
               ),
-              const SizedBox(height: 16),
-              _buildDataCard(
-                label: 'Email',
-                value: profileCtrl.email.value,
-                onEdit: () => _showEditDialog(context, 'Email', profileCtrl.email.value, (val) => profileCtrl.updateEmail(val)),
-              ),
-              const SizedBox(height: 16),
-              _buildDataCard(
-                label: 'Sandi',
-                value: '***********', // Tetap disamarkan di UI
-                onEdit: () => _showEditDialog(context, 'Katasandi', '', (val) => profileCtrl.updatePassword(val)),
-              ),
             ],
           ),
         );
@@ -242,7 +230,7 @@ class DataDiriScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             spreadRadius: 1,
             offset: const Offset(0, 2),

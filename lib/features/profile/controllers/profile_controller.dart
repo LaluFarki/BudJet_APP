@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,8 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileController extends GetxController {
   // Reactive states
-  var name = 'Rian Setyo'.obs;
-  var email = 'rian@gmail.com'.obs;
+  var name = 'Pengguna'.obs;
+  var email = 'pengguna@email.com'.obs;
   var password = '***********'.obs;
   var profileImagePath = ''.obs;
 
@@ -23,8 +24,8 @@ class ProfileController extends GetxController {
   Future<void> _loadProfileData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      name.value = prefs.getString('profile_name') ?? 'Rian Setyo';
-      email.value = prefs.getString('profile_email') ?? 'rian@gmail.com';
+      name.value = prefs.getString('profile_name') ?? 'Pengguna';
+      email.value = prefs.getString('profile_email') ?? 'pengguna@email.com';
       password.value = prefs.getString('profile_password') ?? '***********';
       profileImagePath.value = prefs.getString('profile_image_path') ?? '';
 
@@ -38,7 +39,7 @@ class ProfileController extends GetxController {
         }
       }
     } catch (e) {
-      print("Error loading profile data: $e");
+      debugPrint("Error loading profile data: $e");
     }
   }
 

@@ -90,8 +90,12 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
     setState(() => _isSaving = true);
 
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) throw Exception('User belum login');
+      var uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        final userCredential = await FirebaseAuth.instance.signInAnonymously();
+        uid = userCredential.user?.uid;
+        if (uid == null) throw Exception('Gagal membuat sesi pengguna baru.');
+      }
 
       // Susun data kategori dengan persentase & budget harian
       final List<Map<String, dynamic>> categories = [];
@@ -108,7 +112,8 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
       }
 
       // Simpan ke Firestore — satu dokumen di users/{uid}
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      // Kita hilangkan await agar tidak memblokir UI jika internet lambat / Firestore nyangkut
+      FirebaseFirestore.instance.collection('users').doc(uid).set({
         'budgetBulanan': widget.budgetBulanan,
         'budgetHarian': widget.budgetHarian,
         'bulan': widget.bulan.toIso8601String(),
@@ -117,7 +122,9 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
         'allocations': widget.allocations,
         'balance': widget.budgetBulanan, // ← Saldo awal = total budget bulanan
         'createdAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      }, SetOptions(merge: true)).catchError((e) {
+        debugPrint('Gagal sinkron budget ke Firebase: $e');
+      });
 
       // Tandai onboarding selesai
       final prefs = await SharedPreferences.getInstance();
