@@ -39,13 +39,32 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
                   child: Obx(() {
-                    return CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.white,
-                      backgroundImage: profileCtrl.profileImagePath.value.isNotEmpty
-                          ? FileImage(File(profileCtrl.profileImagePath.value)) as ImageProvider
-                          : const AssetImage('assets/profile.jpg'),
-                    );
+                    final path = profileCtrl.profileImagePath.value;
+                    const avatarEmojis = ['🐱', '🐻', '🦊', '🐰', '🐼'];
+                    const avatarColors = [
+                      Color(0xFFFCE4EC), Color(0xFFFFF3E0), Color(0xFFFFF9C4),
+                      Color(0xFFF3E5F5), Color(0xFFE8F5E9),
+                    ];
+                    if (path.startsWith('avatar:')) {
+                      final idx = int.tryParse(path.split(':').last) ?? 0;
+                      return CircleAvatar(
+                        radius: 50,
+                        backgroundColor: avatarColors[idx.clamp(0, 4)],
+                        child: Text(avatarEmojis[idx.clamp(0, 4)],
+                            style: const TextStyle(fontSize: 46)),
+                      );
+                    } else if (path.isNotEmpty) {
+                      return CircleAvatar(
+                        radius: 50,
+                        backgroundImage: FileImage(File(path)),
+                      );
+                    } else {
+                      return const CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.white,
+                        child: Icon(Icons.person, size: 46, color: Colors.grey),
+                      );
+                    }
                   }),
                 ),
                 // Icon Edit overlay photo
