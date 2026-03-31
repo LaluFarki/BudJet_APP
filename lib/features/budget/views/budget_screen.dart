@@ -1,26 +1,25 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../transaction/controllers/transaction_controller.dart';
 import 'widgets/budget_donut_chart.dart';
 
+/// Halaman Budget Saya — menampilkan rencana alokasi budget yang disimpan di Firestore.
+/// Membaca dari users/{uid}.categories (bukan dari transaksi aktual).
 class BudgetScreen extends StatelessWidget {
   const BudgetScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Definisi Warna Kategori (Sedikit lebih cerah/hidup)
-    const colorMakanan = Color(0xFFFF7B33); // Orange Vivid Soft
-    const colorTransport = Color(0xFF1D9CCB); // Biru Vivid Soft
-    const colorTabungan = Color(0xFFBCE037); // Hijau Lime Vivid Soft
-    const colorLainnya = Color.fromARGB(255, 225, 225, 225); // Abu-abu jika ada kategori selain 3 di atas
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    // Akses controller untuk mengambil data yang reaktif
-    final txCtrl = Get.find<TransactionController>();
-
-    final currencyCcy = NumberFormat.currency(
-        locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final currencyFmt = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -52,293 +51,244 @@ class BudgetScreen extends StatelessWidget {
           ),
         ),
       ),
-      // Gunakan Obx agar UI me-render ulang ketika data transaksi / firebase berubah
-      body: Obx(() {
-        final now = DateTime.now();
+      body: uid == null
+          ? const Center(child: Text('Belum login'))
+          : StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-        // 1. Hitung total Bulanan & Harian berdasarkan kategori
-        double totalBulanan = 0;
-        double makanBulanan = 0;
-        double transportBulanan = 0;
-        double tabunganBulanan = 0;
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return _buildEmpty();
+                }
 
-        double makanHarian = 0;
-        double transportHarian = 0;
-        double tabunganHarian = 0;
+                final data =
+                    snapshot.data!.data() as Map<String, dynamic>? ?? {};
 
-        for (var tx in txCtrl.transactions) {
-          if (tx.type == 'expense' &&
-              tx.date.month == now.month &&
-              tx.date.year == now.year) {
-            
-            totalBulanan += tx.amount;
-            final cat = tx.kategori.toLowerCase();
+                // Ambil data budget dari Firestore
+                final double budgetBulanan =
+                    (data['budgetBulanan'] ?? 0).toDouble();
+                final List<dynamic> categoriesRaw = data['categories'] ?? [];
 
-            // Mapping berdasarkan kata kunci kategori
-            if (cat.contains('makan')) {
-              makanBulanan += tx.amount;
-              if (tx.date.day == now.day) makanHarian += tx.amount;
-            } else if (cat.contains('transport')) {
-              transportBulanan += tx.amount;
-              if (tx.date.day == now.day) transportHarian += tx.amount;
-            } else if (cat.contains('tabung')) {
-              tabunganBulanan += tx.amount;
-              if (tx.date.day == now.day) tabunganHarian += tx.amount;
-            }
-          }
-        }
+                // Parse daftar kategori
+                final categories = categoriesRaw
+                    .map((c) => c as Map<String, dynamic>)
+                    .toList();
 
-        double lainnyaBulanan =
-            totalBulanan - (makanBulanan + transportBulanan + tabunganBulanan);
+                if (categories.isEmpty || budgetBulanan == 0) {
+                  return _buildEmpty();
+                }
 
-        // 2. Kalkulasi Persentase untuk Donut Chart
-        double pctMakan = totalBulanan > 0 ? makanBulanan / totalBulanan : 0;
-        double pctTransport =
-            totalBulanan > 0 ? transportBulanan / totalBulanan : 0;
-        double pctTabungan =
-            totalBulanan > 0 ? tabunganBulanan / totalBulanan : 0;
-        double pctLainnya = totalBulanan > 0 ? lainnyaBulanan / totalBulanan : 0;
+                // Warna per kategori (urutan)
+                const segmentColors = [
+                  Color(0xFFFF7B33),
+                  Color(0xFF1D9CCB),
+                  Color(0xFFBCE037),
+                  Color(0xFFAB6AEA),
+                  Color(0xFFFC5A8D),
+                ];
 
-        // Bikin segment responsif, sembunyikan jika angkanya 0 dan tampilkan yang ada saja
-        final List<DonutSegment> dynamicSegments = totalBulanan > 0
-            ? [
-                if (pctMakan > 0)
-                  DonutSegment(percentage: pctMakan, color: colorMakanan),
-                if (pctTransport > 0)
-                  DonutSegment(percentage: pctTransport, color: colorTransport),
-                if (pctTabungan > 0)
-                  DonutSegment(percentage: pctTabungan, color: colorTabungan),
-                // Jika total persentase di luar 3 item utama, masukkan abu-abu
-                if (pctLainnya > 0)
-                  DonutSegment(percentage: pctLainnya, color: colorLainnya),
-              ]
-            : [
-                // Segment kosongan melingkar penuh kalau saldo 0/belum ada pengeluaran
-                const DonutSegment(percentage: 1.0, color: Color(0xFFF0F0F0))
-              ];
+                // Build donut segments
+                final segments = categories.asMap().entries.map((e) {
+                  final alokasi =
+                      (e.value['alokasi'] ?? 0).toDouble();
+                  return DonutSegment(
+                    percentage:
+                        budgetBulanan > 0 ? alokasi / budgetBulanan : 0,
+                    color: segmentColors[e.key % segmentColors.length],
+                  );
+                }).toList();
 
-        // Format Teks Utama (cth: Rp 1,5jt)
-        String formatSingkatText(double val) {
-          if (val == 0) return 'Rp 0';
-          if (val >= 1000000) {
-            return 'Rp ${(val / 1000000).toStringAsFixed(1).replaceAll('.0', '').replaceAll('.', ',')}jt';
-          }
-          if (val >= 1000) {
-            return 'Rp ${(val / 1000).toStringAsFixed(1).replaceAll('.0', '').replaceAll('.', ',')}k';
-          }
-          return currencyCcy.format(val);
-        }
+                // Format angka singkat (Rp 1,5jt)
+                String formatSingkat(double val) {
+                  if (val == 0) return 'Rp 0';
+                  if (val >= 1000000) {
+                    return 'Rp ${(val / 1000000).toStringAsFixed(1).replaceAll('.0', '').replaceAll('.', ',')}jt';
+                  }
+                  if (val >= 1000) {
+                    return 'Rp ${(val / 1000).toStringAsFixed(1).replaceAll('.0', '').replaceAll('.', ',')}k';
+                  }
+                  return currencyFmt.format(val);
+                }
 
-        return NotificationListener<OverscrollIndicatorNotification>(
-          onNotification: (overscroll) {
-            overscroll.disallowIndicator(); // Mematikan efek melar (jelly) secara native
-            return true;
-          },
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
+                return NotificationListener<OverscrollIndicatorNotification>(
+                  onNotification: (s) {
+                    s.disallowIndicator();
+                    return true;
+                  },
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        // 1. Kartu Donut Chart
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Column(
+                            children: [
+                              BudgetDonutChart(
+                                size: 180,
+                                totalText: formatSingkat(budgetBulanan),
+                                segments: segments,
+                              ),
+                              const SizedBox(height: 28),
+                              // Legend
+                              Wrap(
+                                spacing: 16,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.center,
+                                children: categories.asMap().entries.map((e) {
+                                  final nama = e.value['nama'] as String? ?? '';
+                                  final pct = (e.value['persentase'] ?? 0).toInt();
+                                  return _buildLegend(
+                                    color: segmentColors[e.key % segmentColors.length],
+                                    title: nama.toUpperCase(),
+                                    value: '$pct%',
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // 2. Rincian Budget Bulanan
+                        _buildRincianCard(
+                          title: 'Rincian Budget Bulanan',
+                          count: categories.length,
+                          children: categories.asMap().entries.map((e) {
+                            final nama = e.value['nama'] as String? ?? '';
+                            final alokasi = (e.value['alokasi'] ?? 0).toDouble();
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _buildDetailRow(
+                                kategori: nama,
+                                index: e.key,
+                                amount: currencyFmt.format(alokasi),
+                                segmentColors: segmentColors,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // 3. Rincian Budget Harian
+                        _buildRincianCard(
+                          title: 'Rincian Budget Harian',
+                          count: categories.length,
+                          children: categories.asMap().entries.map((e) {
+                            final nama = e.value['nama'] as String? ?? '';
+                            final harian = (e.value['harian'] ??
+                                    (e.value['alokasi'] ?? 0) / 30)
+                                .toDouble();
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _buildDetailRow(
+                                kategori: nama,
+                                index: e.key,
+                                amount: currencyFmt.format(harian),
+                                segmentColors: segmentColors,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 80),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.pie_chart_outline, size: 80, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'Belum ada data budget.\nSelesaikan pengaturan awal terlebih dahulu.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey, fontSize: 15),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRincianCard({
+    required String title,
+    required int count,
+    required List<Widget> children,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // 1. KARTU GRAFIK DONUT
-              Container(
-                padding: const EdgeInsets.all(24.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  children: [
-                    // Tombol Edit di pojok kanan atas
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: const Icon(Icons.edit_outlined,
-                            size: 18, color: AppColors.textDark),
-                      ),
-                    ),
-
-                    // Donut Chart Dinamis
-                    BudgetDonutChart(
-                      size: 160,
-                      totalText: formatSingkatText(totalBulanan),
-                      segments: dynamicSegments,
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Keterangan / Legend
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLegend(
-                            color: colorMakanan,
-                            title: 'MAKAN & MINUM',
-                            value: '${(pctMakan * 100).toStringAsFixed(0)}%'),
-                        _buildLegend(
-                            color: colorTransport,
-                            title: 'TRANSPORTASI',
-                            value: '${(pctTransport * 100).toStringAsFixed(0)}%'),
-                        _buildLegend(
-                            color: colorTabungan,
-                            title: 'TABUNGAN',
-                            value: '${(pctTabungan * 100).toStringAsFixed(0)}%'),
-                      ],
-                    ),
-                  ],
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
                 ),
               ),
-
-              const SizedBox(height: 24),
-
-              // 2. KARTU RINCIAN BULANAN
               Container(
-                padding: const EdgeInsets.all(24),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Rincian Budget Bulanan',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textDark),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text('3 Item',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    _buildDetailRow(
-                      icon: Icons.fastfood_outlined,
-                      iconBgColor: const Color(0xFFFFEAE0),
-                      iconColor: colorMakanan,
-                      title: 'Makan & Minum',
-                      amount: currencyCcy.format(makanBulanan),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildDetailRow(
-                      icon: Icons.directions_bus_outlined,
-                      iconBgColor: const Color(0xFFDCF3FB),
-                      iconColor: colorTransport,
-                      title: 'Transportasi',
-                      amount: currencyCcy.format(transportBulanan),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildDetailRow(
-                      icon: Icons.payments_outlined,
-                      iconBgColor: const Color(0xFFE9F8C6),
-                      iconColor: const Color(0xFF5AB975),
-                      title: 'Tabungan',
-                      amount: currencyCcy.format(tabunganBulanan),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // 3. KARTU RINCIAN HARIAN
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Rincian Budget Harian',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textDark),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text('3 Item',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    _buildDetailRow(
-                      icon: Icons.fastfood_outlined,
-                      iconBgColor: const Color(0xFFFFEAE0),
-                      iconColor: colorMakanan,
-                      title: 'Makan & Minum',
-                      amount: currencyCcy.format(makanHarian),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildDetailRow(
-                      icon: Icons.directions_bus_outlined,
-                      iconBgColor: const Color(0xFFDCF3FB),
-                      iconColor: colorTransport,
-                      title: 'Transportasi',
-                      amount: currencyCcy.format(transportHarian),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildDetailRow(
-                      icon: Icons.payments_outlined,
-                      iconBgColor: const Color(0xFFE9F8C6),
-                      iconColor: const Color(0xFF5AB975),
-                      title: 'Tabungan',
-                      amount: currencyCcy.format(tabunganHarian),
-                    ),
-                  ],
+                child: Text(
+                  '$count Item',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ),
             ],
           ),
-        ));
-      }),
+          const SizedBox(height: 20),
+          ...children,
+        ],
+      ),
     );
   }
 
-  Widget _buildLegend(
-      {required Color color, required String title, required String value}) {
+  Widget _buildLegend({
+    required Color color,
+    required String title,
+    required String value,
+  }) {
     return Column(
       children: [
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
           title,
           style: const TextStyle(
@@ -361,12 +311,33 @@ class BudgetScreen extends StatelessWidget {
     );
   }
 
+  IconData _iconForKategori(String k) {
+    final key = k.toLowerCase();
+    if (key.contains('makan') || key.contains('minum')) {
+      return Icons.fastfood_outlined;
+    }
+    if (key.contains('transport')) return Icons.directions_bus_outlined;
+    if (key.contains('tabung')) return Icons.savings_outlined;
+    if (key.contains('hibur')) return Icons.movie_outlined;
+    return Icons.label_outline;
+  }
+
+  Color _iconBgFor(int i) {
+    const bgs = [
+      Color(0xFFFFEAE0),
+      Color(0xFFDCF3FB),
+      Color(0xFFE9F8C6),
+      Color(0xFFF0E5FA),
+      Color(0xFFFFE4EE),
+    ];
+    return bgs[i % bgs.length];
+  }
+
   Widget _buildDetailRow({
-    required IconData icon,
-    required Color iconBgColor,
-    required Color iconColor,
-    required String title,
+    required String kategori,
+    required int index,
     required String amount,
+    required List<Color> segmentColors,
   }) {
     return Row(
       children: [
@@ -374,28 +345,32 @@ class BudgetScreen extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: iconBgColor,
+            color: _iconBgFor(index),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: iconColor, size: 22),
-        ),
-        const SizedBox(width: 16),
-        Text(
-          title,
-          style: const TextStyle(
-            color: AppColors.textDark,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
+          child: Icon(
+            _iconForKategori(kategori),
+            color: segmentColors[index % segmentColors.length],
+            size: 22,
           ),
         ),
-        const Spacer(),
-        // Padding nominal ke kanan
+        const SizedBox(width: 14),
+        Expanded(
+          child: Text(
+            kategori,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textDark,
+            ),
+          ),
+        ),
         Text(
           amount,
           style: const TextStyle(
-            color: AppColors.textDark,
             fontSize: 15,
             fontWeight: FontWeight.bold,
+            color: AppColors.textDark,
           ),
         ),
       ],

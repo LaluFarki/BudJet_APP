@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:get/get.dart';
 
 // Sesuaikan dengan nama package kamu
 import 'package:flutter_application_1/features/algoritma_pembagian/algoritma_pembagian.dart';
+import 'layar_analisis_budget.dart';
 
 /// Layar 2 dari 2: Bagi budget per kategori + validasi + simpan ke Firebase.
 ///
@@ -153,72 +150,31 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   }
 
   // ─────────────────────────────────────────
-  // SIMPAN KE FIREBASE
+  // LANJUT KE HALAMAN ANALISIS
   // ─────────────────────────────────────────
 
-  Future<void> _simpan() async {
-    if (!_isValid || _isSaving) return;
+  void _lanjut() {
+    if (!_isValid) return;
 
-    setState(() => _isSaving = true);
-
-    try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) throw Exception('User belum login');
-
-      // Remove unused bulanKey
-
-      // Susun data kategori
-      final List<Map<String, dynamic>> categories = [];
-      for (int i = 0; i < widget.kategoriList.length; i++) {
-        final alokasi = _parseRupiah(controllers[i].text);
-        categories.add({
-          'nama': widget.kategoriList[i],
-          'alokasi': alokasi,
-          // Persentase dari total budget — berguna untuk chart teman
-          'persentase': widget.budgetBulanan > 0
-              ? (alokasi / widget.budgetBulanan * 100).roundToDouble()
-              : 0,
-        });
-      }
-
-      // Data yang disimpan ke Firestore digabung ke users/{userId}
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .set({
-            'budgetBulanan': widget.budgetBulanan,
-            'budgetHarian': _budgetCtrl.budgetHarian,
-            'bulan': widget.bulan.toIso8601String(),
-            'categories': categories,
-            'selectedCategories': widget.kategoriList,
-            'createdAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-
-      // Tandai onboarding selesai
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isOnboardingDone', true);
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Budget berhasil disimpan! ✅'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      // Arahkan ke Dasbor (Home) karena onboarding selesai
-      Get.offAllNamed('/');
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal menyimpan: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+    // Kumpulkan alokasi per kategori
+    final Map<String, double> allocations = {};
+    for (int i = 0; i < widget.kategoriList.length; i++) {
+      allocations[widget.kategoriList[i]] = _parseRupiah(controllers[i].text);
     }
+
+    // Navigasi ke Layar Analisis Budget (Layar 10)
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LayarAnalisisBudget(
+          budgetBulanan: widget.budgetBulanan,
+          budgetHarian: _budgetCtrl.budgetHarian,
+          bulan: widget.bulan,
+          kategoriList: widget.kategoriList,
+          allocations: allocations,
+        ),
+      ),
+    );
   }
 
   // ─────────────────────────────────────────
@@ -461,14 +417,13 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
 
               const SizedBox(height: 15),
 
-              // ── Tombol Simpan ──
+              // ── Tombol Lanjut ──
               // Aktif hanya kalau _isValid (sisa = 0)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isValid && !_isSaving ? _simpan : null,
+                  onPressed: _isValid ? _lanjut : null,
                   style: ElevatedButton.styleFrom(
-                    // Abu-abu kalau belum valid, kuning kalau valid
                     backgroundColor: _isValid
                         ? const Color(0xFFD6E85A)
                         : Colors.grey.shade300,
@@ -478,16 +433,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: _isSaving
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.black,
-                          ),
-                        )
-                      : const Text('Simpan', style: TextStyle(fontSize: 22)),
+                  child: const Text('Lanjut →', style: TextStyle(fontSize: 22)),
                 ),
               ),
 
