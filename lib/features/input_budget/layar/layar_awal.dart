@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../komponen/tombol_utama.dart';
-import 'layar_form_anggaran.dart';
+import 'package:flutter_application_1/features/onboarding/views/layar_profil_setup.dart';
 
 class LayarAwal extends StatelessWidget {
   const LayarAwal({super.key});
@@ -74,7 +74,7 @@ class LayarAwal extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => LayarFormAnggaran(),
+                        builder: (context) => const LayarProfilSetup(),
                       ),
                     );
                   },

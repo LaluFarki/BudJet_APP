@@ -50,13 +50,35 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ],
                   )),
-                  Obx(() => CircleAvatar(
-                    radius: 25,
-                    backgroundColor: Colors.white,
-                    backgroundImage: profileCtrl.profileImagePath.value.isNotEmpty
-                        ? FileImage(File(profileCtrl.profileImagePath.value)) as ImageProvider
-                        : const AssetImage('assets/profile.jpg'),
-                  )),
+                  Obx(() {
+                    final path = profileCtrl.profileImagePath.value;
+                    // Dukungan avatar emoji (format "avatar:0" s/d "avatar:4")
+                    const avatarEmojis = ['🐱', '🐻', '🦊', '🐰', '🐼'];
+                    if (path.startsWith('avatar:')) {
+                      final idx = int.tryParse(path.split(':').last) ?? 0;
+                      final emoji = avatarEmojis[idx.clamp(0, 4)];
+                      const avatarColors = [
+                        Color(0xFFFCE4EC), Color(0xFFFFF3E0), Color(0xFFFFF9C4),
+                        Color(0xFFF3E5F5), Color(0xFFE8F5E9),
+                      ];
+                      return CircleAvatar(
+                        radius: 25,
+                        backgroundColor: avatarColors[idx.clamp(0, 4)],
+                        child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                      );
+                    } else if (path.isNotEmpty) {
+                      return CircleAvatar(
+                        radius: 25,
+                        backgroundImage: FileImage(File(path)),
+                      );
+                    } else {
+                      return const CircleAvatar(
+                        radius: 25,
+                        backgroundColor: Colors.white,
+                        child: Icon(Icons.person, color: Colors.grey),
+                      );
+                    }
+                  }),
                 ],
               ),
               const SizedBox(height: 20),
