@@ -106,7 +106,7 @@ class CategoryListWidget extends StatelessWidget {
 
             // ── Row: Tombol Budget Saya (Fixed) | Divider | Kategori (Scrollable) ──
             SizedBox(
-              height: 90,
+              height: 100,
               child: Row(
                 children: [
                   // ── Tombol Budget Saya (Fixed di kiri) ──
@@ -116,17 +116,30 @@ class CategoryListWidget extends StatelessWidget {
                       width: 80,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        // Efek gradasi lembut agar terlihat lebih menarik
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Colors.white, Color(0xFFF9FFF2)],
+                        ),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: const Color(0xFFDCE775).withValues(alpha: 0.7),
-                          width: 1.5,
+                          color: const Color(0xFF4CAF50), // Hijau lebih segar & lembut
+                          width: 2.0, 
                         ),
                         boxShadow: [
+                          // Aksen hitam sangat tipis
                           BoxShadow(
-                            color: const Color(0xFFDCE775).withValues(alpha: 0.12),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
+                            color: Colors.black.withValues(alpha: 0.08),
+                            spreadRadius: 0.5,
+                            blurRadius: 0,
+                          ),
+                          // Glow hijau yang lebih halus
+                          BoxShadow(
+                            color: const Color(0xFF4CAF50).withValues(alpha: 0.15),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
@@ -139,15 +152,15 @@ class CategoryListWidget extends StatelessWidget {
                               color: Color(0xFFE4F8E4),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.payments_outlined, color: Color(0xFF70C94B), size: 22),
+                            child: const Icon(Icons.payments, color: Color(0xFF58A83A), size: 26),
                           ),
                           const SizedBox(height: 6),
                           const Text(
                             'Budget',
                             style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textGrey,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1E1E1E),
                             ),
                           ),
                         ],

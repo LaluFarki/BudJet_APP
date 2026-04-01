@@ -10,7 +10,7 @@ class LayarAwal extends StatelessWidget {
     final darkNavy = const Color(0xFF1E1E1E);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB), // Kembalikan ke warna asli
+      backgroundColor: const Color(0xFFF8F9FB), // Warna asli yang lebih halus
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -19,17 +19,30 @@ class LayarAwal extends StatelessWidget {
               children: [
                 const SizedBox(height: 40),
                 
-                // Gambar dengan ColorFilter untuk menghilangkan garis putih di bawahnya
+                // Gambar dengan efek fade di 4 sisi (Vignette) agar menyatu total
                 Center(
-                  child: Transform.scale(
-                    scale: 1.1, // Sedikit di-zoom
-                    child: ColorFiltered(
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xFFF8F9FB),
-                        BlendMode.darken,
-                      ),
+                  child: ShaderMask(
+                    shaderCallback: (rect) {
+                      return LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent],
+                        stops: [0.0, 0.05, 0.95, 1.0], // Fade atas & bawah
+                      ).createShader(rect);
+                    },
+                    blendMode: BlendMode.dstIn,
+                    child: ShaderMask(
+                      shaderCallback: (rect) {
+                        return LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent],
+                          stops: [0.0, 0.05, 0.95, 1.0], // Fade kiri & kanan
+                        ).createShader(rect);
+                      },
+                      blendMode: BlendMode.dstIn,
                       child: Image.asset(
-                        "assets/img/image2.png",
+                        "assets/img/image2.jpeg",
                         height: MediaQuery.of(context).size.height * 0.42,
                         fit: BoxFit.contain,
                       ),
@@ -37,7 +50,7 @@ class LayarAwal extends StatelessWidget {
                   ),
                 ),
                 
-                const SizedBox(height: 45),
+                const SizedBox(height: 30), // Jarak disesuaikan agar pas
 
                 // Judul Bahasa Indonesia
                 Text(

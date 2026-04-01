@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../budget/views/widgets/budget_donut_chart.dart';
+import '../../../../core/utils/app_helpers.dart';
 
 /// Layar 3 dari 3 (onboarding): Analisis & konfirmasi pembagian budget.
 /// Menerima data dari LayarBudgetKategori dan menampilkan:
@@ -43,36 +44,9 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
     decimalDigits: 0,
   );
 
-  // Mapping warna per kategori
-  static const List<Color> _segmentColors = [
-    Color(0xFFFF7B33), // Orange - Makanan
-    Color(0xFF1D9CCB), // Biru - Transport
-    Color(0xFFBCE037), // Hijau lime - Tabungan
-    Color(0xFFAB6AEA), // Ungu - Hiburan
-    Color(0xFFFC5A8D), // Pink - Custom
-  ];
-
-  Color _colorForIndex(int i) => _segmentColors[i % _segmentColors.length];
-
-  IconData _iconForKategori(String k) {
-    final key = k.toLowerCase();
-    if (key.contains('makan') || key.contains('minum')) return Icons.fastfood_outlined;
-    if (key.contains('transport')) return Icons.directions_bus_outlined;
-    if (key.contains('tabung')) return Icons.savings_outlined;
-    if (key.contains('hibur')) return Icons.movie_outlined;
-    return Icons.label_outline;
-  }
-
-  Color _iconBgFor(int i) {
-    const bgs = [
-      Color(0xFFFFEAE0),
-      Color(0xFFDCF3FB),
-      Color(0xFFE9F8C6),
-      Color(0xFFF0E5FA),
-      Color(0xFFFFE4EE),
-    ];
-    return bgs[i % bgs.length];
-  }
+  Color _colorForIndex(String k, int i) => AppHelpers.getCategoryColor(k, i);
+  Color _iconBgFor(String k, int i) => AppHelpers.getCategoryColorBg(k, i);
+  IconData _iconForKategori(String k) => AppHelpers.getCategoryIcon(k);
 
   String _formatSingkat(double val) {
     if (val == 0) return 'Rp 0';
@@ -158,7 +132,7 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
             final alokasi = widget.allocations[e.value] ?? 0;
             return DonutSegment(
               percentage: alokasi / totalBudget,
-              color: _colorForIndex(e.key),
+              color: _colorForIndex(e.value, e.key),
             );
           }).toList()
         : [const DonutSegment(percentage: 1.0, color: Color(0xFFF0F0F0))];
@@ -222,7 +196,7 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
                             ? (alokasi / totalBudget * 100).round()
                             : 0;
                         return _buildLegend(
-                          color: _colorForIndex(e.key),
+                          color: _colorForIndex(e.value, e.key),
                           title: e.value.toUpperCase(),
                           value: '$pct%',
                         );
@@ -245,8 +219,8 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
                           padding: const EdgeInsets.only(bottom: 16),
                           child: _buildDetailRow(
                             icon: _iconForKategori(e.value),
-                            iconBg: _iconBgFor(e.key),
-                            iconColor: _colorForIndex(e.key),
+                            iconBg: _iconBgFor(e.value, e.key),
+                            iconColor: _colorForIndex(e.value, e.key),
                             title: e.value,
                             amount: _currencyFormat.format(widget.allocations[e.value] ?? 0),
                           ),
@@ -270,8 +244,8 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
                         padding: const EdgeInsets.only(bottom: 16),
                         child: _buildDetailRow(
                           icon: _iconForKategori(e.value),
-                          iconBg: _iconBgFor(e.key),
-                          iconColor: _colorForIndex(e.key),
+                          iconBg: _iconBgFor(e.value, e.key),
+                          iconColor: _colorForIndex(e.value, e.key),
                           title: e.value,
                           amount: _currencyFormat.format(harian),
                         ),

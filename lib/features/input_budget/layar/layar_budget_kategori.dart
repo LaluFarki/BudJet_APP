@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 // Sesuaikan dengan nama package kamu
 import 'package:budjet/features/algoritma_pembagian/algoritma_pembagian.dart';
 import 'layar_analisis_budget.dart';
+import '../../../../core/utils/app_helpers.dart';
 
 /// Layar 2 dari 2: Bagi budget per kategori + validasi + simpan ke Firebase.
 ///
@@ -128,23 +129,15 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   }
 
   IconData _getIcon(String kategori) {
-    final k = kategori.toLowerCase();
-    if (k.contains('makan') || k.contains('minum')) return Icons.fastfood;
-    if (k.contains('transport')) return Icons.directions_bus;
-    if (k.contains('hibur')) return Icons.movie;
-    if (k.contains('tabung')) return Icons.savings;
-    return Icons.category;
+    return AppHelpers.getCategoryIcon(kategori);
   }
 
   Color _getColor(String kategori) {
-    final k = kategori.toLowerCase();
-    if (k.contains('makan') || k.contains('minum')) {
-      return Colors.orange.shade200;
-    }
-    if (k.contains('transport')) return Colors.blue.shade200;
-    if (k.contains('hibur')) return Colors.purple.shade200;
-    if (k.contains('tabung')) return Colors.green.shade200;
-    return Colors.grey.shade300;
+    return AppHelpers.getCategoryColor(kategori);
+  }
+
+  Color _getColorBg(String kategori) {
+    return AppHelpers.getCategoryColorBg(kategori);
   }
 
   // ─────────────────────────────────────────
@@ -414,10 +407,10 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                         children: [
                           CircleAvatar(
                             radius: 25,
-                            backgroundColor: _getColor(kategori),
+                            backgroundColor: _getColorBg(kategori),
                             child: Icon(
                               _getIcon(kategori),
-                              color: Colors.black,
+                              color: _getColor(kategori),
                             ),
                           ),
                           const SizedBox(width: 15),
@@ -430,6 +423,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1E1E1E),
                                   ),
                                 ),
                                 const SizedBox(height: 10),
