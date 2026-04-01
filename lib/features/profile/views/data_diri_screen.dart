@@ -186,19 +186,10 @@ class DataDiriScreen extends StatelessWidget {
         centerTitle: true,
         backgroundColor: AppColors.backgroundLight,
         elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16.0),
-          child: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back, color: AppColors.textDark, size: 20),
-            ),
-            onPressed: () => Get.back(),
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textDark, size: 22),
+          onPressed: () => Get.back(),
         ),
       ),
       body: Obx(() {

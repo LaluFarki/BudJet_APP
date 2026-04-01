@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_helpers.dart';
 import '../../transaction/controllers/transaction_controller.dart';
 import 'widgets/budget_donut_chart.dart';
 
@@ -262,7 +263,6 @@ class BudgetScreen extends StatelessWidget {
                                 kategori: nama,
                                 index: e.key,
                                 amount: '${formatK(sisa)} / ${formatK(alokasi)}',
-                                segmentColors: segmentColors,
                               ),
                             );
                           }).toList(),
@@ -288,7 +288,6 @@ class BudgetScreen extends StatelessWidget {
                                 kategori: nama,
                                 index: e.key,
                                 amount: '${formatK(sisa)} / ${formatK(harian)}',
-                                segmentColors: segmentColors,
                               ),
                             );
                           }).toList(),
@@ -404,32 +403,17 @@ class BudgetScreen extends StatelessWidget {
   }
 
   IconData _iconForKategori(String k) {
-    final key = k.toLowerCase();
-    if (key.contains('makan') || key.contains('minum')) {
-      return Icons.fastfood_outlined;
-    }
-    if (key.contains('transport')) return Icons.directions_bus_outlined;
-    if (key.contains('tabung')) return Icons.savings_outlined;
-    if (key.contains('hibur')) return Icons.movie_outlined;
-    return Icons.label_outline;
+    return AppHelpers.getCategoryIcon(k);
   }
 
-  Color _iconBgFor(int i) {
-    const bgs = [
-      Color(0xFFFFEAE0),
-      Color(0xFFDCF3FB),
-      Color(0xFFE9F8C6),
-      Color(0xFFF0E5FA),
-      Color(0xFFFFE4EE),
-    ];
-    return bgs[i % bgs.length];
+  Color _iconBgFor(int i, String name) {
+    return AppHelpers.getCategoryColorBg(name, i);
   }
 
   Widget _buildDetailRow({
     required String kategori,
     required int index,
     required String amount,
-    required List<Color> segmentColors,
   }) {
     return Row(
       children: [
@@ -437,12 +421,12 @@ class BudgetScreen extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: _iconBgFor(index),
+            color: _iconBgFor(index, kategori),
             shape: BoxShape.circle,
           ),
           child: Icon(
             _iconForKategori(kategori),
-            color: segmentColors[index % segmentColors.length],
+            color: AppHelpers.getCategoryColor(kategori, index),
             size: 22,
           ),
         ),

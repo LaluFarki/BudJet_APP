@@ -5,47 +5,24 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../transaction/controllers/transaction_controller.dart';
+import '../../../../core/utils/app_helpers.dart';
 
 class CategoryListWidget extends StatelessWidget {
   const CategoryListWidget({super.key});
 
   // ──────────────────────────────────────────
-  // Icon & Warna: SAMA PERSIS dengan layar_budget_kategori.dart
+  // Icon & Warna: SAMA PERSIS antar halaman via AppHelpers
   // ──────────────────────────────────────────
   static IconData _getIcon(String kategori) {
-    final k = kategori.toLowerCase();
-    if (k.contains('makan') || k.contains('minum')) return Icons.fastfood;
-    if (k.contains('transport')) return Icons.directions_bus;
-    if (k.contains('hibur')) return Icons.movie;
-    if (k.contains('tabung')) return Icons.savings;
-    if (k.contains('belanja')) return Icons.shopping_bag;
-    if (k.contains('pendidik')) return Icons.school;
-    if (k.contains('kesehat')) return Icons.local_hospital;
-    return Icons.category;
+    return AppHelpers.getCategoryIcon(kategori);
   }
 
-  static Color _getColor(String kategori) {
-    final k = kategori.toLowerCase();
-    if (k.contains('makan') || k.contains('minum')) return Colors.orange;
-    if (k.contains('transport')) return Colors.blue;
-    if (k.contains('hibur')) return Colors.purple;
-    if (k.contains('tabung')) return Colors.green;
-    if (k.contains('belanja')) return Colors.pink;
-    if (k.contains('pendidik')) return Colors.teal;
-    if (k.contains('kesehat')) return Colors.red;
-    return Colors.grey;
+  static Color _getColor(String kategori, [int index = 0]) {
+    return AppHelpers.getCategoryColor(kategori, index);
   }
 
-  static Color _getColorBg(String kategori) {
-    final k = kategori.toLowerCase();
-    if (k.contains('makan') || k.contains('minum')) return Colors.orange.shade50;
-    if (k.contains('transport')) return Colors.blue.shade50;
-    if (k.contains('hibur')) return Colors.purple.shade50;
-    if (k.contains('tabung')) return Colors.green.shade50;
-    if (k.contains('belanja')) return Colors.pink.shade50;
-    if (k.contains('pendidik')) return Colors.teal.shade50;
-    if (k.contains('kesehat')) return Colors.red.shade50;
-    return Colors.grey.shade100;
+  static Color _getColorBg(String kategori, [int index = 0]) {
+    return AppHelpers.getCategoryColorBg(kategori, index);
   }
 
   @override
@@ -200,9 +177,9 @@ class CategoryListWidget extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final cat = categories[index];
                         final nama = cat['nama'] as String? ?? '';
-                        final catColor = _getColor(nama);
+                        final catColor = _getColor(nama, index);
                         final catIcon = _getIcon(nama);
-                        final catBg = _getColorBg(nama);
+                        final catBg = _getColorBg(nama, index);
 
                         return GestureDetector(
                           onTap: () => _showCategoryPopup(
@@ -306,7 +283,6 @@ class CategoryListWidget extends StatelessWidget {
             tx.date.month == now.month)
         .fold(0.0, (total, item) => total + item.amount);
 
-    // Expense hari ini untuk kategori ini
     final usedHari = txCtrl.transactions
         .where((tx) =>
             tx.type == 'expense' &&
@@ -318,7 +294,10 @@ class CategoryListWidget extends StatelessWidget {
 
     final sisaBulan = alokasi - usedBulan;
     final sisaHari = harian - usedHari;
-    final catColor = _getColor(nama);
+    
+    // Temukan index asli untuk konsistensi warna (opsional, tapi lebih baik pakai keyword match)
+    final catIndex = txCtrl.transactions.indexWhere((tx) => matchKategori(tx.kategori));
+    final catColor = _getColor(nama, catIndex != -1 ? catIndex : 0);
     final catIcon = _getIcon(nama);
 
     showDialog(

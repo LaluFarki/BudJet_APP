@@ -1,0 +1,16 @@
+On branch main
+Your branch and 'origin/main' have diverged,
+and have 1 and 2 different commits each, respectively.
+  (use "git pull" if you want to integrate the remote branch with yours)
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	analyze_output.txt
+	analyze_output_utf8.txt
+	git_status.txt
+	reflog.txt
+	status_final.txt
+	status_full.txt
+	status_full2.txt
+
+nothing added to commit but untracked files present (use "git add" to track)

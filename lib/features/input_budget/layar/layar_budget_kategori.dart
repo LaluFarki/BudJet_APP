@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 // Sesuaikan dengan nama package kamu
-import 'package:flutter_application_1/features/algoritma_pembagian/algoritma_pembagian.dart';
+import 'package:budjet/features/algoritma_pembagian/algoritma_pembagian.dart';
 import 'layar_analisis_budget.dart';
 
 /// Layar 2 dari 2: Bagi budget per kategori + validasi + simpan ke Firebase.

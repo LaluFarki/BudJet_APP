@@ -12,7 +12,9 @@ import 'widgets/expense_summary.dart';
 import 'widgets/category_list.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onProfileTap;
+
+  const HomeScreen({super.key, this.onProfileTap});
 
   @override
   Widget build(BuildContext context) {
@@ -31,55 +33,59 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Obx(() => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Selamat Pagi',
-                        style: TextStyle(color: AppColors.textGrey),
-                      ),
-                      Text(
-                        profileCtrl.name.value,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+              GestureDetector(
+                onTap: onProfileTap,
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Obx(() => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Selamat Pagi',
+                          style: TextStyle(color: AppColors.textGrey),
                         ),
-                      ),
-                    ],
-                  )),
-                  Obx(() {
-                    final path = profileCtrl.profileImagePath.value;
-                    // Dukungan avatar emoji (format "avatar:0" s/d "avatar:4")
-                    const avatarEmojis = ['🐱', '🐻', '🦊', '🐰', '🐼'];
-                    if (path.startsWith('avatar:')) {
-                      final idx = int.tryParse(path.split(':').last) ?? 0;
-                      final emoji = avatarEmojis[idx.clamp(0, 4)];
-                      const avatarColors = [
-                        Color(0xFFFCE4EC), Color(0xFFFFF3E0), Color(0xFFFFF9C4),
-                        Color(0xFFF3E5F5), Color(0xFFE8F5E9),
-                      ];
-                      return CircleAvatar(
-                        radius: 25,
-                        backgroundColor: avatarColors[idx.clamp(0, 4)],
-                        child: Text(emoji, style: const TextStyle(fontSize: 24)),
-                      );
-                    } else if (path.isNotEmpty) {
-                      return CircleAvatar(
-                        radius: 25,
-                        backgroundImage: FileImage(File(path)),
-                      );
-                    } else {
-                      return const CircleAvatar(
-                        radius: 25,
-                        backgroundColor: Colors.white,
-                        child: Icon(Icons.person, color: Colors.grey),
-                      );
-                    }
-                  }),
-                ],
+                        Text(
+                          profileCtrl.name.value,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    )),
+                    Obx(() {
+                      final path = profileCtrl.profileImagePath.value;
+                      // Dukungan avatar emoji (format "avatar:0" s/d "avatar:4")
+                      const avatarEmojis = ['🐱', '🐻', '🦊', '🐰', '🐼'];
+                      if (path.startsWith('avatar:')) {
+                        final idx = int.tryParse(path.split(':').last) ?? 0;
+                        final emoji = avatarEmojis[idx.clamp(0, 4)];
+                        const avatarColors = [
+                          Color(0xFFFCE4EC), Color(0xFFFFF3E0), Color(0xFFFFF9C4),
+                          Color(0xFFF3E5F5), Color(0xFFE8F5E9),
+                        ];
+                        return CircleAvatar(
+                          radius: 25,
+                          backgroundColor: avatarColors[idx.clamp(0, 4)],
+                          child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                        );
+                      } else if (path.isNotEmpty) {
+                        return CircleAvatar(
+                          radius: 25,
+                          backgroundImage: FileImage(File(path)),
+                        );
+                      } else {
+                        return const CircleAvatar(
+                          radius: 25,
+                          backgroundColor: Colors.white,
+                          child: Icon(Icons.person, color: Colors.grey),
+                        );
+                      }
+                    }),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
 

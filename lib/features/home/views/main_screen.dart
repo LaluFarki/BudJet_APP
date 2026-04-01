@@ -14,8 +14,8 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    const HomeScreen(),
+  List<Widget> get _pages => [
+    HomeScreen(onProfileTap: () => _onNavTapped(1)),
     const ProfileScreen(),
   ];
 

@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../input_budget/layar/layar_form_anggaran.dart';
+import '../../profile/controllers/profile_controller.dart';
 
 /// Layar setup profil awal yang muncul setelah "Get Started".
 /// User memilih nama dan foto profil (avatar cartoon atau galeri).
@@ -111,6 +112,13 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
         ).catchError((e) {
           debugPrint('Gagal sinkron profile ke Firebase: $e');
         });
+      }
+
+      // ── Update Controller (jika sudah di-init) ──
+      if (Get.isRegistered<ProfileController>()) {
+        final ctrl = Get.find<ProfileController>();
+        ctrl.name.value = name;
+        ctrl.profileImagePath.value = profilePic;
       }
 
       // ── Lanjut ke form budget ──

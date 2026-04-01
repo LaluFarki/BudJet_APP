@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/features/onboarding/views/layar_profil_setup.dart';
+import 'package:budjet/features/onboarding/views/layar_profil_setup.dart';
 
 class LayarAwal extends StatelessWidget {
   const LayarAwal({super.key});

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 // 🔥 Features yang dipakai
-import 'package:flutter_application_1/features/input_budget/layar/layar_awal.dart';
+import 'package:budjet/features/input_budget/layar/layar_awal.dart';
 import '../features/home/views/main_screen.dart';
 import '../features/history/views/history_screen.dart';
 import '../features/riwayat_transaksi/views/riwayat_transaksi_screen.dart';

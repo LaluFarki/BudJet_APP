@@ -12,53 +12,55 @@ class AppHelpers {
     return formatter.format(amount);
   }
 
-  /// Menentukan Icon berdasarkan Kategori atau Judul Transaksi otomatis
-  static IconData getCategoryIcon(String category, String title) {
-    final lowerTitle = title.toLowerCase();
-    
-    // Pengecekan Khusus berdasarkan Judul (Koreksi & Top-Up)
-    if (lowerTitle.contains('koreksi')) return Icons.price_change_outlined;
-    if (lowerTitle.contains('top-up') || lowerTitle.contains('gaji') || lowerTitle.contains('tambah saldo')) {
-      return Icons.monetization_on; // Ikon koin mata uang
-    }
-
-    // Pengecekan Standar berdasarkan Kategori dari Form AddTransaction
-    switch (category) {
-      case 'Makanan & Minuman':
-        return Icons.restaurant_outlined;
-      case 'Transportasi':
-        return Icons.directions_car_outlined;
-      case 'Belanja':
-        return Icons.shopping_bag_outlined;
-      case 'Hiburan':
-        return Icons.sports_esports_outlined;
-      case 'Lainnya':
-      default:
-        return Icons.category_outlined;
-    }
+  /// Menentukan Icon berdasarkan Kategori (Keyword Based)
+  static IconData getCategoryIcon(String category, [dynamic titleOrNothing]) {
+    final k = category.toLowerCase();
+    if (k.contains('makan') || k.contains('minum')) return Icons.fastfood;
+    if (k.contains('transport')) return Icons.directions_bus;
+    if (k.contains('hibur')) return Icons.movie;
+    if (k.contains('tabung')) return Icons.savings;
+    if (k.contains('belanja')) return Icons.shopping_bag;
+    if (k.contains('pendidik')) return Icons.school;
+    if (k.contains('kesehat')) return Icons.local_hospital;
+    return Icons.category; // Default for others
   }
 
-  /// Menentukan Warna Icon berdasarkan Kategori atau Judul Transaksi
-  static Color getCategoryColor(String category, String title) {
-    final lowerTitle = title.toLowerCase();
-    
-    if (lowerTitle.contains('koreksi')) return Colors.red; // Koreksi saldo selalu merah/pink
-    if (lowerTitle.contains('top-up') || lowerTitle.contains('gaji') || lowerTitle.contains('tambah saldo')) {
-      return Colors.green; // Uang masuk hijau
-    }
+  /// Menentukan Warna Icon berdasarkan Kategori (Keyword Based)
+  static Color getCategoryColor(String category, [dynamic indexOrTitle]) {
+    final k = category.toLowerCase();
+    if (k.contains('makan') || k.contains('minum')) return Colors.orange;
+    if (k.contains('transport')) return Colors.blue;
+    if (k.contains('hibur')) return Colors.purple;
+    if (k.contains('tabung')) return Colors.green;
+    if (k.contains('belanja')) return Colors.pink;
+    if (k.contains('pendidik')) return Colors.teal;
+    if (k.contains('kesehat')) return Colors.red;
 
-    switch (category) {
-      case 'Makanan & Minuman':
-        return Colors.orange;
-      case 'Transportasi':
-        return Colors.blue;
-      case 'Belanja':
-        return Colors.purple;
-      case 'Hiburan':
-        return Colors.pink;
-      case 'Lainnya':
-      default:
-        return Colors.grey.shade600;
-    }
+    // Fallback for custom categories using dynamic colors
+    // Use hashCode for stability across different screens if no index is provided
+    int index = (indexOrTitle is int) ? indexOrTitle : category.hashCode.abs();
+    const cols = [
+      Color(0xFFFF7B33), Color(0xFF1D9CCB), Color(0xFFBCE037), Color(0xFFAB6AEA), Color(0xFFFC5A8D),
+    ];
+    return cols[index % cols.length];
+  }
+
+  /// Menentukan Warna Background berdasarkan Kategori (Keyword Based)
+  static Color getCategoryColorBg(String category, [dynamic indexOrTitle]) {
+    final k = category.toLowerCase();
+    if (k.contains('makan') || k.contains('minum')) return Colors.orange.shade50;
+    if (k.contains('transport')) return Colors.blue.shade50;
+    if (k.contains('hibur')) return Colors.purple.shade50;
+    if (k.contains('tabung')) return Colors.green.shade50;
+    if (k.contains('belanja')) return Colors.pink.shade50;
+    if (k.contains('pendidik')) return Colors.teal.shade50;
+    if (k.contains('kesehat')) return Colors.red.shade50;
+
+    // Fallback for custom categories using dynamic colors
+    int index = (indexOrTitle is int) ? indexOrTitle : category.hashCode.abs();
+    const bgs = [
+      Color(0xFFFFEAE0), Color(0xFFDCF3FB), Color(0xFFE9F8C6), Color(0xFFF0E5FA), Color(0xFFFFE4EE),
+    ];
+    return bgs[index % bgs.length];
   }
 }

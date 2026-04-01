@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 // Sesuaikan dengan nama package kamu
-import 'package:flutter_application_1/features/algoritma_pembagian/algoritma_pembagian.dart';
+import 'package:budjet/features/algoritma_pembagian/algoritma_pembagian.dart';
 
 /// ─────────────────────────────────────────────────────────────
 /// PLAYGROUND — Test Algoritma Pembagian Budget

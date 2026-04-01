@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_helpers.dart';
 
 class EditBudgetScreen extends StatefulWidget {
   const EditBudgetScreen({super.key});
@@ -20,6 +21,8 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   );
 
   bool _isLoading = true;
+  bool _hasChanged = false; // Flag to track if the user made any edits
+  bool _canPopNow = false;  // Flag to allow actually popping the screen
   double _budgetBulanan = 0.0;
   List<Map<String, dynamic>> _categories = [];
   
@@ -32,6 +35,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
     _loadData();
 
     _totalBudgetCtrl.addListener(() {
+      _hasChanged = true;
       setState(() {});
     });
   }
@@ -69,10 +73,13 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
           final alokasi = (c['alokasi'] ?? 0).toDouble();
           _formatRupiah(ctrl, alokasi.toStringAsFixed(0));
           ctrl.addListener(() {
+            _hasChanged = true;
             setState(() {});
           });
           return ctrl;
         }).toList();
+        // After loading, reset _hasChanged as we just populated the data
+        _hasChanged = false;
       }
     } catch (e) {
       debugPrint("Error loading: $e");
@@ -121,26 +128,133 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   bool get _isValid => _sisaBudget.abs() < 1;
 
   IconData _iconForKategori(String k) {
-    final key = k.toLowerCase();
-    if (key.contains('makan') || key.contains('minum')) return Icons.fastfood_outlined;
-    if (key.contains('transport')) return Icons.directions_bus_outlined;
-    if (key.contains('tabung')) return Icons.savings_outlined;
-    if (key.contains('hibur')) return Icons.movie_outlined;
-    return Icons.label_outline;
+    return AppHelpers.getCategoryIcon(k);
   }
 
-  Color _iconBgFor(int i) {
-    const bgs = [
-      Color(0xFFFFEAE0), Color(0xFFDCF3FB), Color(0xFFE9F8C6), Color(0xFFF0E5FA), Color(0xFFFFE4EE),
-    ];
-    return bgs[i % bgs.length];
+  // Handle system back button and AppBar leading
+  void _handleBack() {
+    final title = 'Yakin ingin kembali?';
+    final message = _hasChanged 
+        ? 'Perubahan Anda belum disimpan.' 
+        : 'Anda belum melakukan perubahan apapun.';
+        
+    Get.defaultDialog(
+      title: title,
+      middleText: message,
+      textConfirm: 'Ya, Kembali',
+      textCancel: 'Batal',
+      confirmTextColor: Colors.white,
+      buttonColor: const Color(0xFFDCE775),
+      cancelTextColor: AppColors.textDark,
+      onConfirm: () {
+        Get.back(); // Close dialog
+        setState(() => _canPopNow = true);
+        Get.back(); // Close screen
+      },
+    );
+  }
+
+  Color _iconBgFor(int i, String name) {
+    return AppHelpers.getCategoryColorBg(name, i);
   }
   
-  Color _iconColFor(int i) {
-    const cols = [
-      Color(0xFFFF7B33), Color(0xFF1D9CCB), Color(0xFFBCE037), Color(0xFFAB6AEA), Color(0xFFFC5A8D),
-    ];
-    return cols[i % cols.length];
+  Color _iconColFor(int i, String name) {
+    return AppHelpers.getCategoryColor(name, i);
+  }
+
+  void _removeCategory(int index) {
+    final catName = _categories[index]['nama'] ?? 'Kategori';
+    Get.defaultDialog(
+      title: 'Hapus Kategori?',
+      middleText: 'Apakah Anda yakin ingin menghapus kategori "$catName" dari anggaran?',
+      textConfirm: 'Hapus',
+      textCancel: 'Batal',
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.redAccent,
+      cancelTextColor: AppColors.textDark,
+      onConfirm: () {
+        setState(() {
+          _categories.removeAt(index);
+          _catControllers[index].dispose();
+          _catControllers.removeAt(index);
+          _hasChanged = true;
+        });
+        Get.back(); // Tutup dialog
+      },
+    );
+  }
+
+  void _showAddCategoryDialog() {
+    final TextEditingController nameCtrl = TextEditingController();
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Tambah Kategori',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameCtrl,
+                decoration: InputDecoration(
+                  hintText: 'Nama Kategori (misal: Pajak)',
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Get.back(),
+                      child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                    ),
+                  ),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final name = nameCtrl.text.trim();
+                        if (name.isNotEmpty) {
+                          if (_categories.any((c) => c['nama'].toLowerCase() == name.toLowerCase())) {
+                            Get.snackbar('Gagal', 'Kategori sudah ada', snackPosition: SnackPosition.BOTTOM);
+                            return;
+                          }
+                          setState(() {
+                            _categories.add({'nama': name, 'alokasi': 0.0});
+                            final ctrl = TextEditingController();
+                            _formatRupiah(ctrl, '0');
+                            ctrl.addListener(() {
+                              _hasChanged = true;
+                              setState(() {});
+                            });
+                            _catControllers.add(ctrl);
+                            _hasChanged = true;
+                          });
+                          Get.back();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD4E858),
+                        foregroundColor: AppColors.textDark,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Tambah'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _onSimpan() async {
@@ -179,6 +293,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
         'categories': updatedCategories,
       }, SetOptions(merge: true));
       
+      setState(() => _canPopNow = true);
       Get.back(); // close progress
       Get.back(); // close page
       Get.snackbar('Berhasil', 'Budget telah diupdate.', snackPosition: SnackPosition.BOTTOM);
@@ -248,57 +363,73 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new,
                     color: AppColors.textDark, size: 22),
-                onPressed: () => Get.back(),
+                onPressed: _handleBack,
               ),
            ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
+          : PopScope(
+              canPop: _canPopNow, // Allow pop only if explicitly allowed
+              onPopInvokedWithResult: (didPop, result) {
+                 if (didPop) return;
+                 _handleBack();
+              },
+              child: SafeArea(
               child: Column(
                 children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Budget Anda',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _totalBudgetCtrl,
-                            keyboardType: TextInputType.number,
-                            onChanged: (val) => _formatRupiah(_totalBudgetCtrl, val),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                            decoration: InputDecoration(
-                              hintText: 'Budget Anda',
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          
-                          Row(
-                            children: [
-                              const Text(
-                                'Sisa Budget: ',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                              ),
-                              Text(
-                                _currencyFmt.format(_sisaBudget.abs()),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: _sisaBudget == 0 ? Colors.green : (_sisaBudget < 0 ? Colors.red : AppColors.textDark),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
+                   // --- FIXED TOP SECTION ---
+                   Container(
+                     padding: const EdgeInsets.fromLTRB(24, 24, 24, 10),
+                     color: AppColors.backgroundLight,
+                     child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         const Text(
+                           'Budget Anda',
+                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                         ),
+                         const SizedBox(height: 10),
+                         TextField(
+                           controller: _totalBudgetCtrl,
+                           keyboardType: TextInputType.number,
+                           onChanged: (val) => _formatRupiah(_totalBudgetCtrl, val),
+                           style: const TextStyle(fontWeight: FontWeight.bold),
+                           decoration: InputDecoration(
+                             hintText: 'Budget Anda',
+                             filled: true,
+                             fillColor: Colors.white,
+                             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                           ),
+                         ),
+                         const SizedBox(height: 24),
+                         Row(
+                           children: [
+                             const Text(
+                               'Sisa Budget: ',
+                               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                             ),
+                             Text(
+                               _currencyFmt.format(_sisaBudget.abs()),
+                               style: TextStyle(
+                                 fontSize: 16,
+                                 fontWeight: FontWeight.bold,
+                                 color: _sisaBudget == 0 ? Colors.green : (_sisaBudget < 0 ? Colors.red : AppColors.textDark),
+                               ),
+                             ),
+                           ],
+                         ),
+                       ],
+                     ),
+                   ),
+
+                   // --- SCROLLABLE CATEGORIES ---
+                   Expanded(
+                     child: SingleChildScrollView(
+                       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
+                       child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
 
                           // Categories Edit
                           ...List.generate(_categories.length, (i) {
@@ -312,17 +443,27 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                     width: 48,
                                     height: 48,
                                     margin: const EdgeInsets.only(top: 24), // center-align with field approx
-                                    decoration: BoxDecoration(color: _iconBgFor(i), shape: BoxShape.circle),
-                                    child: Icon(_iconForKategori(catName), color: _iconColFor(i), size: 22),
+                                    decoration: BoxDecoration(color: _iconBgFor(i, catName), shape: BoxShape.circle),
+                                    child: Icon(_iconForKategori(catName), color: _iconColFor(i, catName), size: 22),
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          catName,
-                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              catName,
+                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                            ),
+                                            IconButton(
+                                              onPressed: () => _removeCategory(i),
+                                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                              visualDensity: VisualDensity.compact,
+                                            ),
+                                          ],
                                         ),
                                         const SizedBox(height: 8),
                                         TextField(
@@ -344,6 +485,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                               ),
                             );
                           }),
+                          const SizedBox(height: 8),
                         ],
                       ),
                     ),
@@ -351,9 +493,19 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
                   // Bottom Action
                   Padding(
-                    padding: const EdgeInsets.all(24.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12),
                     child: Column(
                       children: [
+                        // FIXED "Tambah Kategori" Button (AS REQUESTED)
+                        TextButton.icon(
+                          onPressed: _showAddCategoryDialog,
+                          icon: const Icon(Icons.add_circle_outline, color: Color(0xFF4CAF50)),
+                          label: const Text(
+                            'Tambah Kategori',
+                            style: TextStyle(color: Color(0xFF4CAF50), fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         Center(
                           child: Text(
                             'Sudah Cocok?',
@@ -380,6 +532,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                 ],
               ),
             ),
+          ),
     );
   }
 }

@@ -34,8 +34,12 @@ class ProfileController extends GetxController {
         final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
         if (doc.exists) {
           final data = doc.data() ?? {};
-          if (data.containsKey('name')) name.value = data['name'];
-          if (data.containsKey('profilePic')) profileImagePath.value = data['profilePic'];
+          // Hanya update jika data dari Firestore tidak kosong / null
+          final fsName = data['name']?.toString() ?? '';
+          final fsPic = data['profilePic']?.toString() ?? '';
+          
+          if (fsName.isNotEmpty) name.value = fsName;
+          if (fsPic.isNotEmpty) profileImagePath.value = fsPic;
         }
       }
     } catch (e) {

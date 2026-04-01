@@ -322,12 +322,41 @@ class AddTransactionScreen extends StatelessWidget {
                                         isExpanded: true,
                                         icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark),
-                                        items: items.map((cat) => DropdownMenuItem(
-                                          value: cat,
-                                          child: Text(cat),
-                                        )).toList(),
+                                        items: [
+                                          ...items.map((cat) => DropdownMenuItem(
+                                            value: cat,
+                                            child: Text(cat),
+                                          )),
+                                          const DropdownMenuItem(
+                                            value: '__ADD_NEW__',
+                                            child: Text(
+                                              'Kategori tidak ada?',
+                                              style: TextStyle(
+                                                color: Colors.blueAccent,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                         onChanged: (val) {
-                                          if (val != null) _selectedCategory.value = val;
+                                          if (val == '__ADD_NEW__') {
+                                            Get.defaultDialog(
+                                              title: 'Kategori Tidak Ada?',
+                                              middleText: 'Anda akan diarahkan ke halaman Edit Budget untuk menambahkan kategori baru.',
+                                              textConfirm: 'Ya, Ke Pengaturan',
+                                              textCancel: 'Batal',
+                                              confirmTextColor: Colors.white,
+                                              buttonColor: const Color(0xFFDCE775),
+                                              cancelTextColor: AppColors.textDark,
+                                              onConfirm: () {
+                                                Get.back(); // Tutup dialog
+                                                Get.toNamed('/edit-budget'); // Pindah ke halaman edit budget
+                                              },
+                                            );
+                                          } else if (val != null) {
+                                            _selectedCategory.value = val;
+                                          }
                                         },
                                       ),
                                     );

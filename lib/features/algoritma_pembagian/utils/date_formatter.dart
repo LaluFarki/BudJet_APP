@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 ///
 /// Cara pakai di widget mana saja:
 /// ```dart
-/// import 'package:flutter_application_1/features/algoritma_pembagian/utils/date_formatter.dart';
+/// import 'package:budjet/features/algoritma_pembagian/utils/date_formatter.dart';
 ///
 /// Text(DateFormatter.jamMenit(transaksi.tanggal))      // → 14:32
 /// Text(DateFormatter.tanggalPendek(transaksi.tanggal)) // → 16 Mar 2026
