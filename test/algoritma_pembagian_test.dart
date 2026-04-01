@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 // Sesuaikan 'nama_app' dengan nama package di pubspec.yaml kamu
-import 'package:flutter_application_1/features/algoritma_pembagian/algoritma_pembagian.dart';
+import 'package:budjet/features/algoritma_pembagian/algoritma_pembagian.dart';
 
 void main() {
   // ─────────────────────────────────────────

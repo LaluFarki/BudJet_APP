@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
+
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_helpers.dart';
@@ -96,8 +96,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSearchBar(),
-              const SizedBox(height: 20),
-              _buildBalanceCard(),
               const SizedBox(height: 24),
               
               // Dynamic Transaction List
@@ -172,7 +170,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
               border: Border.all(color: Colors.grey.shade200),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04), // Replaced withValues for backward compatibility
+                  color: Colors.black.withValues(alpha: 0.04), // Replaced withValues for backward compatibility
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -208,7 +206,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -218,79 +216,14 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     );
   }
 
-  Widget _buildBalanceCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      decoration: BoxDecoration(
-        color: AppColors.primaryGreen,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryGreen.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Saldo Saya',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark.withOpacity(0.7),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Obx(() {
-            return Text(
-              AppHelpers.formatCurrency(txController.userBalance.value),
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: AppColors.textDark,
-                letterSpacing: -0.5,
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
 
   Widget _buildTransactionTile(TransactionModel tx) {
     final isIncome = tx.type == 'income';
     final catIcon = AppHelpers.getCategoryIcon(tx.kategori, tx.title);
     final catColor = AppHelpers.getCategoryColor(tx.kategori, tx.title);
 
-    return Slidable(
-      key: ValueKey(tx.id),
-      endActionPane: ActionPane(
-        motion: const ScrollMotion(),
-        children: [
-          SlidableAction(
-            onPressed: (context) {
-              Get.toNamed('/add-tx', arguments: tx);
-            },
-            backgroundColor: const Color(0xFFDCE775),
-            foregroundColor: AppColors.textDark,
-            icon: Icons.edit_outlined,
-            borderRadius: BorderRadius.circular(15),
-          ),
-          SlidableAction(
-            onPressed: (context) {
-              txController.deleteTransaction(tx);
-            },
-            backgroundColor: const Color(0xFFFF697A),
-            foregroundColor: Colors.white,
-            icon: Icons.delete_outline,
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ],
-      ),
+    return GestureDetector(
+      onTap: () => _showTransactionOptions(context, tx),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
@@ -298,7 +231,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -310,7 +243,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundColor: catColor.withOpacity(0.15),
+                backgroundColor: catColor.withValues(alpha: 0.15),
                 child: Icon(
                   catIcon,
                   color: catColor,
@@ -353,6 +286,119 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showTransactionOptions(BuildContext context, TransactionModel tx) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Judul
+            Text(
+              tx.title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${tx.kategori} • ${AppHelpers.formatCurrency(tx.amount)}',
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textGrey,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Tombol Edit
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Get.toNamed('/add-tx', arguments: tx);
+                },
+                icon: const Icon(Icons.edit_outlined, size: 20),
+                label: const Text('Edit Transaksi'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDCE775),
+                  foregroundColor: AppColors.textDark,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Tombol Hapus
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Get.defaultDialog(
+                    title: 'Hapus Transaksi?',
+                    titleStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    middleText: 'Transaksi "${tx.title}" akan dihapus permanen.',
+                    textConfirm: 'Hapus',
+                    textCancel: 'Batal',
+                    confirmTextColor: Colors.white,
+                    buttonColor: const Color(0xFFFF697A),
+                    cancelTextColor: Colors.grey,
+                    onConfirm: () {
+                      txController.deleteTransaction(tx);
+                      Get.back();
+                      Get.snackbar(
+                        'Berhasil',
+                        'Transaksi berhasil dihapus',
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: const Color(0xFF4CAF50),
+                        colorText: Colors.white,
+                        margin: const EdgeInsets.all(16),
+                        borderRadius: 12,
+                        duration: const Duration(seconds: 2),
+                      );
+                    },
+                  );
+                },
+                icon: const Icon(Icons.delete_outline, size: 20),
+                label: const Text('Hapus Transaksi'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF697A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

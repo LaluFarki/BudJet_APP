@@ -1,0 +1,24 @@
+ M lib/features/algoritma_pembagian/algoritma_playground.dart
+ M lib/features/home/views/home_screen.dart
+ M lib/features/home/views/widgets/balance_card.dart
+ M lib/features/home/views/widgets/expense_summary.dart
+ M lib/features/home/views/widgets/finance_menu.dart
+ M lib/features/profile/views/data_diri_screen.dart
+ M lib/features/profile/views/profile_screen.dart
+ M lib/features/riwayat_transaksi/views/riwayat_transaksi_screen.dart
+ M lib/features/transaction/views/add_transaction_screen.dart
+ M lib/features/transaction/views/success_transaction_screen.dart
+ M lib/features/transaction/views/today_transactions_screen.dart
+ M macos/Flutter/GeneratedPluginRegistrant.swift
+ M pubspec.lock
+ M pubspec.yaml
+ M windows/flutter/generated_plugin_registrant.cc
+ M windows/flutter/generated_plugins.cmake
+?? analyze_output.txt
+?? analyze_output_utf8.txt
+?? android/app/src/main/kotlin/com/example/manajemen_keuangan/
+?? assets/img/
+?? git_status.txt
+?? lib/features/input_budget/
+?? lib/features/onboarding/
+?? reflog.txt

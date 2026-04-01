@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 // Sesuaikan dengan nama package kamu
 
 import 'layar_budget_kategori.dart';
+import '../../../../core/utils/app_helpers.dart';
 
 /// Layar 1 dari 2: Input budget bulanan + pilih kategori.
 ///
@@ -330,12 +331,32 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(kategoriList[index]),
-                                  const SizedBox(width: 8),
                                   Icon(
-                                    isSelected[index] ? Icons.check : Icons.add,
-                                    size: 16,
-                                    color: Colors.black,
+                                    AppHelpers.getCategoryIcon(kategoriList[index]),
+                                    size: 18,
+                                    color: isSelected[index]
+                                        ? Colors.black87
+                                        : Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    kategoriList[index],
+                                    style: TextStyle(
+                                      color: isSelected[index]
+                                          ? Colors.black87
+                                          : Colors.grey.shade700,
+                                      fontWeight: isSelected[index]
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    isSelected[index] ? Icons.check_circle : Icons.add_circle_outline,
+                                    size: 14,
+                                    color: isSelected[index]
+                                        ? Colors.black54
+                                        : Colors.grey.shade400,
                                   ),
                                 ],
                               ),

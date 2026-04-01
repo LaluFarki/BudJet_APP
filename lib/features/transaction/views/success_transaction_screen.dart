@@ -33,7 +33,7 @@ class SuccessTransactionScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFDCE775).withOpacity(0.4),
+                        color: const Color(0xFFDCE775).withValues(alpha: 0.4),
                         blurRadius: 30,
                         spreadRadius: 5,
                       ),
@@ -81,10 +81,10 @@ class SuccessTransactionScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.04),
+                      color: Colors.grey.withValues(alpha: 0.04),
                       blurRadius: 15,
                       spreadRadius: 2,
                     ),
@@ -125,7 +125,7 @@ class SuccessTransactionScreen extends StatelessWidget {
                               width: 5,
                               height: 1.5,
                               child: DecoratedBox(
-                                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3)),
+                                decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3)),
                               ),
                             ),
                           ),
@@ -158,7 +158,7 @@ class SuccessTransactionScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     
                     // Garis Pemisah (Solid)
-                    Divider(color: Colors.grey.withOpacity(0.15), thickness: 1.5),
+                    Divider(color: Colors.grey.withValues(alpha: 0.15), thickness: 1.5),
                     const SizedBox(height: 20),
                     
                     // Baris Sisa Saldo

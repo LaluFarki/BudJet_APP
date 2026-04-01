@@ -1,0 +1,55 @@
+﻿Analyzing BudJet_APP...                                         
+
+   info - The import of 'package:flutter_application_1/features/algoritma_pembagian/utils/date_formatter.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_application_1/features/algoritma_pembagian/algoritma_pembagian.dart' - lib\features\algoritma_pembagian\algoritma_playground.dart:6:8 - unnecessary_import
+warning - The value of the local variable 'ringkasanBulanan' isn't used - lib\features\algoritma_pembagian\algoritma_playground.dart:410:11 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\algoritma_pembagian\algoritma_playground.dart:588:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\algoritma_pembagian\algoritma_playground.dart:623:36 - deprecated_member_use
+   info - The parameter name 'sum' matches a visible type name - lib\features\budget\views\budget_screen.dart:43:23 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\budget\views\budget_screen.dart:50:23 - avoid_types_as_parameter_names
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\budget\views\budget_screen.dart:243:63 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\features\budget\views\edit_budget_screen.dart:78:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\home_screen.dart:175:50 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\home_screen.dart:187:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\widgets\balance_card.dart:123:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\widgets\balance_card.dart:127:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\widgets\balance_card.dart:181:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\widgets\category_list.dart:145:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\widgets\category_list.dart:150:60 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\home\views\widgets\category_list.dart:199:45 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\widgets\category_list.dart:220:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\widgets\category_list.dart:225:51 - deprecated_member_use
+   info - The parameter name 'sum' matches a visible type name - lib\features\home\views\widgets\category_list.dart:307:21 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\home\views\widgets\category_list.dart:317:21 - avoid_types_as_parameter_names
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\widgets\category_list.dart:336:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\widgets\expense_summary.dart:33:42 - deprecated_member_use
+  error - The getter 'todayExpense' isn't defined for the type 'TransactionController' - lib\features\home\views\widgets\expense_summary.dart:54:58 - undefined_getter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\views\widgets\expense_summary.dart:74:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\onboarding\views\layar_profil_setup.dart:225:68 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\onboarding\views\layar_profil_setup.dart:271:45 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\features\profile\controllers\profile_controller.dart:41:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\profile\views\data_diri_screen.dart:28:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\profile\views\data_diri_screen.dart:115:60 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\profile\views\data_diri_screen.dart:233:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\profile\views\profile_screen.dart:35:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\profile\views\profile_screen.dart:170:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\riwayat_transaksi\views\riwayat_transaksi_screen.dart:173:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\riwayat_transaksi\views\riwayat_transaksi_screen.dart:209:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\riwayat_transaksi\views\riwayat_transaksi_screen.dart:234:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\riwayat_transaksi\views\riwayat_transaksi_screen.dart:246:43 - deprecated_member_use
+   info - The parameter name 'sum' matches a visible type name - lib\features\transaction\controllers\transaction_controller.dart:39:19 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\transaction\controllers\transaction_controller.dart:43:19 - avoid_types_as_parameter_names
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\add_transaction_screen.dart:166:65 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\add_transaction_screen.dart:188:65 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\add_transaction_screen.dart:218:65 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\add_transaction_screen.dart:236:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\add_transaction_screen.dart:285:67 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\add_transaction_screen.dart:299:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\success_transaction_screen.dart:36:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\success_transaction_screen.dart:84:57 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\success_transaction_screen.dart:87:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\success_transaction_screen.dart:128:78 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\success_transaction_screen.dart:161:48 - deprecated_member_use
+  error - The getter 'userBalance' isn't defined for the type 'TransactionController' - lib\features\transaction\views\success_transaction_screen.dart:173:42 - undefined_getter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\today_transactions_screen.dart:78:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\transaction\views\today_transactions_screen.dart:89:39 - deprecated_member_use
+

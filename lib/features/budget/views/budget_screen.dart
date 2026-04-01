@@ -2,21 +2,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../transaction/controllers/transaction_controller.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_helpers.dart';
+import '../../transaction/controllers/transaction_controller.dart';
 import 'widgets/budget_donut_chart.dart';
 
 /// Halaman Budget Saya — menampilkan rencana alokasi budget yang disimpan di Firestore.
 /// Membaca dari users/{uid}.categories (bukan dari transaksi aktual).
 class BudgetScreen extends StatelessWidget {
-  // Ambil TransactionController (GetX)
-  TransactionController get _txnCtrl => Get.find<TransactionController>();
   const BudgetScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    final txCtrl = Get.find<TransactionController>();
 
     final currencyFmt = NumberFormat.currency(
       locale: 'id_ID',
@@ -24,37 +24,51 @@ class BudgetScreen extends StatelessWidget {
       decimalDigits: 0,
     );
 
+    // Helper: flexible matching antara nama kategori budget & kategori transaksi
+    // Misal "Makan & Minum" cocok dengan "Makanan & Minuman"
+    bool matchKategori(String txKategori, String budgetKat) {
+      final txLower = txKategori.toLowerCase();
+      final katLower = budgetKat.toLowerCase();
+      if (txLower == katLower) return true;
+      final keywords = katLower.split(RegExp(r'[\s&]+'));
+      for (final kw in keywords) {
+        if (kw.length >= 3 && txLower.contains(kw)) return true;
+      }
+      return false;
+    }
+
+    double expenseBulanan(String kat) {
+      final now = DateTime.now();
+      return txCtrl.transactions
+          .where((tx) => tx.type == 'expense' && matchKategori(tx.kategori, kat) && tx.date.year == now.year && tx.date.month == now.month)
+          .fold(0.0, (total, item) => total + item.amount);
+    }
+
+    double expenseHarian(String kat) {
+      final now = DateTime.now();
+      return txCtrl.transactions
+          .where((tx) => tx.type == 'expense' && matchKategori(tx.kategori, kat) && tx.date.year == now.year && tx.date.month == now.month && tx.date.day == now.day)
+          .fold(0.0, (total, item) => total + item.amount);
+    }
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: const Color(0xFFF4F6FA),
       appBar: AppBar(
         title: const Text(
           'Budget Saya',
           style: TextStyle(
-            color: AppColors.textDark,
+            color: Color(0xFF1E1E1E),
             fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
         ),
         centerTitle: true,
-        backgroundColor: AppColors.backgroundLight,
+        backgroundColor: const Color(0xFFF4F6FA),
         elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16.0),
-          child: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.arrow_back,
-                color: AppColors.textDark,
-                size: 20,
-              ),
-            ),
-            onPressed: () => Get.back(),
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textDark, size: 22),
+          onPressed: () => Get.back(),
         ),
       ),
       body: uid == null
@@ -77,8 +91,8 @@ class BudgetScreen extends StatelessWidget {
                     snapshot.data!.data() as Map<String, dynamic>? ?? {};
 
                 // Ambil data budget dari Firestore
-                final double budgetBulanan = (data['budgetBulanan'] ?? 0)
-                    .toDouble();
+                final double budgetBulanan =
+                    (data['budgetBulanan'] ?? 0).toDouble();
                 final List<dynamic> categoriesRaw = data['categories'] ?? [];
 
                 // Parse daftar kategori
@@ -99,164 +113,192 @@ class BudgetScreen extends StatelessWidget {
                   Color(0xFFFC5A8D),
                 ];
 
-                // Build donut segments
-                final segments = categories.asMap().entries.map((e) {
-                  final alokasi = (e.value['alokasi'] ?? 0).toDouble();
-                  return DonutSegment(
-                    percentage: budgetBulanan > 0 ? alokasi / budgetBulanan : 0,
-                    color: segmentColors[e.key % segmentColors.length],
-                  );
-                }).toList();
-
-                // Format angka singkat (Rp 1,5jt)
-                String formatSingkat(double val) {
+                // Format angka donut chart: selalu tampilkan 1 angka di belakang koma
+                String formatDonut(double val) {
                   if (val == 0) return 'Rp 0';
                   if (val >= 1000000) {
-                    return 'Rp ${(val / 1000000).toStringAsFixed(1).replaceAll('.0', '').replaceAll('.', ',')}jt';
-                  }
-                  if (val >= 1000) {
-                    return 'Rp ${(val / 1000).toStringAsFixed(1).replaceAll('.0', '').replaceAll('.', ',')}k';
+                    return 'Rp ${(val / 1000000).toStringAsFixed(1).replaceAll('.', ',')}jt';
                   }
                   return currencyFmt.format(val);
                 }
 
-                // --- Tambahan: Sisa Budget Per Kategori ---
-                return Obx(() {
-                  // Ambil semua transaksi expense bulan ini
-                  final now = DateTime.now();
-                  final txns = _txnCtrl.transactions.where(
-                    (tx) =>
-                        tx.type == 'expense' &&
-                        tx.date.year == now.year &&
-                        tx.date.month == now.month,
-                  );
+                // Format K untuk rincian: 200K, 1,8jt, dsb
+                String formatK(double val) {
+                  if (val == 0) return '0';
+                  if (val >= 1000000) {
+                    return '${(val / 1000000).toStringAsFixed(1).replaceAll('.0', '').replaceAll('.', ',')}jt';
+                  }
+                  if (val >= 1000) {
+                    final k = val / 1000;
+                    if (k == k.roundToDouble()) {
+                      return '${k.toInt()}K';
+                    }
+                    return '${k.toStringAsFixed(1).replaceAll('.0', '').replaceAll('.', ',')}K';
+                  }
+                  return val.toInt().toString();
+                }
 
-                  // Map kategori -> total pengeluaran
-                  Map<String, double> pengeluaranPerKategori = {};
-                  for (var tx in txns) {
-                    pengeluaranPerKategori[tx.kategori] =
-                        (pengeluaranPerKategori[tx.kategori] ?? 0) + tx.amount;
+                // Gunakan Obx agar SELURUH tampilan reaktif terhadap perubahan transaksi
+                return Obx(() {
+                  final double expensesTotal = txCtrl.transactions
+                      .where((t) => t.type == 'expense' && t.date.year == DateTime.now().year && t.date.month == DateTime.now().month)
+                      .fold(0.0, (s, i) => s + i.amount);
+
+                  final double sisaTotalBulanan = budgetBulanan - expensesTotal;
+                  final double sisaDisplay = sisaTotalBulanan < 0 ? 0.0 : sisaTotalBulanan;
+
+                  // Build donut segments based on REMAINING amount
+                  final segments = categories.asMap().entries.map((e) {
+                    final nama = e.value['nama'] as String? ?? '';
+                    final alokasi = (e.value['alokasi'] ?? 0).toDouble();
+                    final used = expenseBulanan(nama);
+                    final sisaKategori = (alokasi - used) < 0 ? 0.0 : (alokasi - used);
+
+                    return DonutSegment(
+                      percentage:
+                          sisaDisplay > 0 ? sisaKategori / sisaDisplay : 0,
+                      color: segmentColors[e.key % segmentColors.length],
+                    );
+                  }).toList();
+                  
+                  // If sisa is 0, provide a blank segment
+                  if (sisaDisplay <= 0) {
+                    segments.add(const DonutSegment(percentage: 1.0, color: Color(0xFFF0F0F0)));
                   }
 
                   return NotificationListener<OverscrollIndicatorNotification>(
-                    onNotification: (s) {
-                      s.disallowIndicator();
-                      return true;
-                    },
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          // 1. Kartu Donut Chart
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: Column(
-                              children: [
-                                BudgetDonutChart(
-                                  size: 180,
-                                  totalText: formatSingkat(budgetBulanan),
-                                  segments: segments,
-                                ),
-                                const SizedBox(height: 28),
-                                // Legend
-                                Wrap(
-                                  spacing: 16,
-                                  runSpacing: 8,
-                                  alignment: WrapAlignment.center,
-                                  children: categories.asMap().entries.map((e) {
-                                    final nama =
-                                        e.value['nama'] as String? ?? '';
-                                    final pct = (e.value['persentase'] ?? 0)
-                                        .toInt();
-                                    return _buildLegend(
-                                      color:
-                                          segmentColors[e.key %
-                                              segmentColors.length],
-                                      title: nama.toUpperCase(),
-                                      value: '$pct%',
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
+                  onNotification: (s) {
+                    s.disallowIndicator();
+                    return true;
+                  },
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        // 1. Kartu Donut Chart
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
                           ),
-
-                          const SizedBox(height: 24),
-
-                          // 2. Rincian Budget Bulanan + Sisa
-                          _buildRincianCard(
-                            title: 'Rincian Budget Bulanan',
-                            count: categories.length,
-                            children: categories.asMap().entries.map((e) {
-                              final nama = e.value['nama'] as String? ?? '';
-                              final alokasi = (e.value['alokasi'] ?? 0)
-                                  .toDouble();
-                              final pengeluaran =
-                                  pengeluaranPerKategori[nama] ?? 0;
-                              final sisa = alokasi - pengeluaran;
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: _buildDetailRow(
-                                  kategori: nama,
-                                  index: e.key,
-                                  sisaText: currencyFmt.format(sisa),
-                                  alokasiText: currencyFmt.format(alokasi),
-                                  isMinus: sisa < 0,
-                                  segmentColors: segmentColors,
+                          child: Stack(
+                            alignment: Alignment.topCenter,
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                child: Column(
+                                children: [
+                                  BudgetDonutChart(
+                                    size: 180,
+                                    totalText: formatDonut(sisaDisplay),
+                                    segments: segments.where((s) => s.color != const Color(0xFFF0F0F0)).toList(),
+                                  ),
+                                  const SizedBox(height: 28),
+                                  // Legend
+                                  Wrap(
+                                    spacing: 16,
+                                    runSpacing: 8,
+                                    alignment: WrapAlignment.center,
+                                    children: categories.asMap().entries.map((e) {
+                                      final nama = e.value['nama'] as String? ?? '';
+                                      final alokasi = (e.value['alokasi'] ?? 0).toDouble();
+                                      final used = expenseBulanan(nama);
+                                      final sisaKategori = (alokasi - used) < 0 ? 0.0 : (alokasi - used);
+                                      
+                                      final pct = sisaDisplay > 0 ? (sisaKategori / sisaDisplay * 100).round() : 0;
+                                      return _buildLegend(
+                                        color: segmentColors[e.key % segmentColors.length],
+                                        title: nama.toUpperCase(),
+                                        value: '$pct%',
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ),
+                              ),
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: InkWell(
+                                  onTap: () => Get.toNamed('/edit-budget'),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.grey.shade200),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.02),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(Icons.edit_outlined, size: 22, color: AppColors.textDark),
+                                  ),
                                 ),
-                              );
-                            }).toList(),
+                              ),
+                            ],
                           ),
+                        ),
 
-                          const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                          // 3. Rincian Budget Harian + Sisa
-                          _buildRincianCard(
-                            title: 'Rincian Budget Harian',
-                            count: categories.length,
-                            children: categories.asMap().entries.map((e) {
-                              final nama = e.value['nama'] as String? ?? '';
-                              final harian =
-                                  (e.value['harian'] ??
-                                          (e.value['alokasi'] ?? 0) / 30)
-                                      .toDouble();
-                              // Hitung pengeluaran harian kategori ini
-                              final now = DateTime.now();
-                              final pengeluaranHarian = _txnCtrl.transactions
-                                  .where(
-                                    (tx) =>
-                                        tx.type == 'expense' &&
-                                        tx.kategori == nama &&
-                                        tx.date.year == now.year &&
-                                        tx.date.month == now.month &&
-                                        tx.date.day == now.day,
-                                  )
-                                  .fold(0.0, (sum, tx) => sum + tx.amount);
-                              final sisaHarian = harian - pengeluaranHarian;
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: _buildDetailRow(
-                                  kategori: nama,
-                                  index: e.key,
-                                  sisaText: currencyFmt.format(sisaHarian),
-                                  alokasiText: currencyFmt.format(harian),
-                                  isMinus: sisaHarian < 0,
-                                  segmentColors: segmentColors,
-                                ),
-                              );
-                            }).toList(),
-                          ),
+                        // 2. Rincian Budget Bulanan
+                        _buildRincianCard(
+                          title: 'Rincian Budget Bulanan',
+                          count: categories.length,
+                          children: categories.asMap().entries.map((e) {
+                            final nama = e.value['nama'] as String? ?? '';
+                            final alokasi = (e.value['alokasi'] ?? 0).toDouble();
+                            final used = expenseBulanan(nama);
+                            final sisa = alokasi - used;
 
-                          const SizedBox(height: 80),
-                        ],
-                      ),
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _buildDetailRow(
+                                kategori: nama,
+                                index: e.key,
+                                amount: '${formatK(sisa)} / ${formatK(alokasi)}',
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // 3. Rincian Budget Harian
+                        _buildRincianCard(
+                          title: 'Rincian Budget Harian',
+                          count: categories.length,
+                          children: categories.asMap().entries.map((e) {
+                            final nama = e.value['nama'] as String? ?? '';
+                            final harian = (e.value['harian'] ??
+                                    (e.value['alokasi'] ?? 0) / 30)
+                                .toDouble();
+                            final used = expenseHarian(nama);
+                            final sisa = harian - used;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _buildDetailRow(
+                                kategori: nama,
+                                index: e.key,
+                                amount: '${formatK(sisa)} / ${formatK(harian)}',
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 80),
+                      ],
                     ),
-                  );
-                });
+                  ),
+                );
+                }); // <== Penutup Obx
               },
             ),
     );
@@ -305,10 +347,8 @@ class BudgetScreen extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
@@ -343,7 +383,7 @@ class BudgetScreen extends StatelessWidget {
         Text(
           title,
           style: const TextStyle(
-            color: Colors.grey,
+            color: Colors.grey, // Grey
             fontSize: 9,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
@@ -353,7 +393,7 @@ class BudgetScreen extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            color: AppColors.textDark,
+            color: Color(0xFF1E1E1E), // textDark
             fontSize: 14,
             fontWeight: FontWeight.bold,
           ),
@@ -363,34 +403,17 @@ class BudgetScreen extends StatelessWidget {
   }
 
   IconData _iconForKategori(String k) {
-    final key = k.toLowerCase();
-    if (key.contains('makan') || key.contains('minum')) {
-      return Icons.fastfood_outlined;
-    }
-    if (key.contains('transport')) return Icons.directions_bus_outlined;
-    if (key.contains('tabung')) return Icons.savings_outlined;
-    if (key.contains('hibur')) return Icons.movie_outlined;
-    return Icons.label_outline;
+    return AppHelpers.getCategoryIcon(k);
   }
 
-  Color _iconBgFor(int i) {
-    const bgs = [
-      Color(0xFFFFEAE0),
-      Color(0xFFDCF3FB),
-      Color(0xFFE9F8C6),
-      Color(0xFFF0E5FA),
-      Color(0xFFFFE4EE),
-    ];
-    return bgs[i % bgs.length];
+  Color _iconBgFor(int i, String name) {
+    return AppHelpers.getCategoryColorBg(name, i);
   }
 
   Widget _buildDetailRow({
     required String kategori,
     required int index,
-    required String sisaText,
-    required String alokasiText,
-    required bool isMinus,
-    required List<Color> segmentColors,
+    required String amount,
   }) {
     return Row(
       children: [
@@ -398,12 +421,12 @@ class BudgetScreen extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: _iconBgFor(index),
+            color: _iconBgFor(index, kategori),
             shape: BoxShape.circle,
           ),
           child: Icon(
             _iconForKategori(kategori),
-            color: segmentColors[index % segmentColors.length],
+            color: AppHelpers.getCategoryColor(kategori, index),
             size: 22,
           ),
         ),
@@ -418,26 +441,12 @@ class BudgetScreen extends StatelessWidget {
             ),
           ),
         ),
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: sisaText,
-                style: TextStyle(
-                  color: isMinus ? Colors.red : AppColors.textDark,
-                ),
-              ),
-              TextSpan(
-                text: ' / $alokasiText',
-                style: const TextStyle(
-                  color: AppColors.textDark,
-                ),
-              ),
-            ],
-          ),
+        Text(
+          amount,
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
+            color: AppColors.textDark,
           ),
         ),
       ],

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 // Sesuaikan dengan nama package kamu
-import 'package:flutter_application_1/features/algoritma_pembagian/algoritma_pembagian.dart';
+import 'package:budjet/features/algoritma_pembagian/algoritma_pembagian.dart';
 import 'layar_analisis_budget.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../../core/utils/app_helpers.dart';
 
 /// Layar 2 dari 2: Bagi budget per kategori + validasi + simpan ke Firebase.
 ///
@@ -50,8 +50,6 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     symbol: 'Rp ',
     decimalDigits: 0,
   );
-
-  bool _isSaving = false;
 
   // ─────────────────────────────────────────
   // COMPUTED (dari input user)
@@ -131,75 +129,24 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   }
 
   IconData _getIcon(String kategori) {
-    final k = kategori.toLowerCase();
-    if (k.contains('makan') || k.contains('minum')) return Icons.fastfood;
-    if (k.contains('transport')) return Icons.directions_bus;
-    if (k.contains('hibur')) return Icons.movie;
-    if (k.contains('tabung')) return Icons.savings;
-    return Icons.category;
+    return AppHelpers.getCategoryIcon(kategori);
   }
 
   Color _getColor(String kategori) {
-    final k = kategori.toLowerCase();
-    if (k.contains('makan') || k.contains('minum')) {
-      return Colors.orange.shade200;
-    }
-    if (k.contains('transport')) return Colors.blue.shade200;
-    if (k.contains('hibur')) return Colors.purple.shade200;
-    if (k.contains('tabung')) return Colors.green.shade200;
-    return Colors.grey.shade300;
+    return AppHelpers.getCategoryColor(kategori);
+  }
+
+  Color _getColorBg(String kategori) {
+    return AppHelpers.getCategoryColorBg(kategori);
   }
 
   // ─────────────────────────────────────────
   // LANJUT KE HALAMAN ANALISIS
   // ─────────────────────────────────────────
 
-  void _simpan() {
-    final double totalDialokasikan = _totalDialokasikan;
-    final double sisa = widget.budgetBulanan - totalDialokasikan;
-    if (sisa > 0) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: AppColors.cardRed,
-          title: const Text(
-            'Saldo Masih Tersisa',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            'Saldo Anda masih tersisa Rp.${_currencyFormat.format(sisa).replaceAll("Rp ", "").trim()}, alokasikan semua saldo anda untuk bisa simpan',
-            style: const TextStyle(color: Colors.white),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      );
-      return;
-    } else if (sisa < 0) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: AppColors.cardRed,
-          title: const Text(
-            'Kelebihan Alokasi',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            'Nominal yang anda masukkan di kategori melebihi sebanyak Rp.${_currencyFormat.format(sisa.abs()).replaceAll("Rp ", "").trim()} dari saldo utama',
-            style: const TextStyle(color: Colors.white),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      );
+  void _lanjut() {
+    if (_sisaBelumDialokasikan > 0.5 || _sisaBelumDialokasikan < -0.5) {
+      _showValidationPopup();
       return;
     }
 
@@ -221,6 +168,66 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
           allocations: allocations,
         ),
       ),
+    );
+  }
+
+  void _showValidationPopup() {
+    final sisa = _sisaBelumDialokasikan;
+    final isOver = sisa < -0.5;
+    final judul = isOver ? 'Budget Melebihi Batas' : 'Saldo Masih Tersisa';
+    final pesan = isOver
+        ? 'Total alokasi melebihi budget sebesar ${_currencyFormat.format(sisa.abs().toInt())}. Silakan kurangi alokasi Anda.'
+        : 'Saldo Anda masih tersisa ${_currencyFormat.format(sisa.toInt())},\nalokasikan semua saldo anda untuk bisa simpan';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: const Color(0xFFE57373), // Warna merah/salmon seperti di lampiran
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  judul,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  pesan,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -400,10 +407,10 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                         children: [
                           CircleAvatar(
                             radius: 25,
-                            backgroundColor: _getColor(kategori),
+                            backgroundColor: _getColorBg(kategori),
                             child: Icon(
                               _getIcon(kategori),
-                              color: Colors.black,
+                              color: _getColor(kategori),
                             ),
                           ),
                           const SizedBox(width: 15),
@@ -416,6 +423,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1E1E1E),
                                   ),
                                 ),
                                 const SizedBox(height: 10),
@@ -464,20 +472,21 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
 
               const SizedBox(height: 15),
 
-              // ── Tombol Simpan ──
+              // ── Tombol Lanjut ──
+              // Selalu aktif secara visual (hijau), validasi ditangani di _lanjut()
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _simpan,
+                  onPressed: _lanjut,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFD6E85A),
+                    backgroundColor: const Color(0xFFD6E85A),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: const Text('Simpan', style: TextStyle(fontSize: 22)),
+                  child: const Text('Lanjut →', style: TextStyle(fontSize: 22)),
                 ),
               ),
 

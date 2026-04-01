@@ -1,264 +1,109 @@
-// ======================================================================
-// FILE : expense_summary.dart
-// FOLDER : lib/features/home/widgets/
-// FUNGSI : Widget untuk menampilkan ringkasan pengeluaran
-//          dalam bentuk dua kartu informasi.
-//
-// Widget ini biasanya ditampilkan di halaman HomeScreen
-// untuk memberikan ringkasan cepat kepada pengguna.
-//
-// Isi widget:
-// 1. Pengeluaran Hari Ini
-// 2. Total Pengeluaran
-//
-// Konsep yang digunakan:
-// - StatelessWidget
-// - Row Layout
-// - Expanded Widget
-// - Container Styling
-// - BoxDecoration
-// - BoxShadow
-// - Column Layout
-//
-// Widget ini bersifat reusable (bisa digunakan ulang).
-// ======================================================================
-
-// Mengimpor package utama Flutter untuk UI
-// Berisi widget seperti Row, Column, Container, Text, dll.
 import 'package:flutter/material.dart';
-
-// Mengimpor file warna global aplikasi
-// Lokasi file:
-//
-// lib/core/constants/app_colors.dart
-//
-// File ini berisi kumpulan warna yang digunakan secara
-// konsisten di seluruh aplikasi.
-//
-// Contoh warna yang digunakan di sini:
-// - AppColors.cardWhite
-// - AppColors.textDark
-// - AppColors.primaryGreen
-//
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/app_helpers.dart';
 import '../../../transaction/controllers/transaction_controller.dart';
 
-// ======================================================================
-// CLASS EXPENSE SUMMARY
-// ======================================================================
-//
-// ExpenseSummary adalah widget yang menampilkan
-// ringkasan data pengeluaran.
-//
-// Widget ini menggunakan StatelessWidget karena:
-//
-// - Tidak memiliki state yang berubah
-// - Hanya menampilkan data statis
-//
-// Jika nanti ingin menampilkan data dari database
-// atau API, widget ini tetap bisa dipakai dan
-// hanya mengganti nilai teksnya.
-//
-// ======================================================================
-
 class ExpenseSummary extends StatelessWidget {
-  // Constructor standar Flutter
   const ExpenseSummary({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // ==================================================================
-    // ROW LAYOUT
-    // ==================================================================
-    //
-    // Row digunakan karena kita ingin menampilkan
-    // dua kotak secara horizontal (kiri dan kanan).
-    //
-    // Layout:
-    //
-    // [ Pengeluaran Hari Ini ]   [ Total Pengeluaran ]
-    //
-    return Row(
-      children: [
-        // ===============================================================
-        // EXPANDED PERTAMA
-        // ===============================================================
-        //
-        // Expanded digunakan agar widget mengambil
-        // ruang kosong yang tersedia secara proporsional.
-        //
-        // Karena ada dua Expanded di Row,
-        // maka keduanya akan memiliki lebar yang sama.
-        //
-        Expanded(
-          child: Container(
-            // Padding memberi jarak antara isi container
-            // dengan batas container
-            padding: const EdgeInsets.all(15),
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-            // ===========================================================
-            // BOX DECORATION
-            // ===========================================================
-            //
-            // Digunakan untuk styling container
-            //
-            decoration: BoxDecoration(
-              // Warna background putih
-              color: AppColors.cardWhite,
+    return StreamBuilder<DocumentSnapshot>(
+      stream: uid != null
+          ? FirebaseFirestore.instance.collection('users').doc(uid).snapshots()
+          : const Stream.empty(),
+      builder: (context, snapshot) {
 
-              // Membuat sudut container melengkung
-              borderRadius: BorderRadius.circular(15),
-
-              // Menambahkan bayangan agar terlihat seperti kartu
-              boxShadow: [
-                BoxShadow(
-                  // Warna bayangan abu dengan opacity kecil
-                  color: Colors.grey.withOpacity(0.1),
-
-                  // Tingkat blur bayangan
-                  blurRadius: 10,
-
-                  // Posisi bayangan (ke bawah)
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-
-            // ===========================================================
-            // COLUMN UNTUK MENYUSUN TEKS
-            // ===========================================================
-            //
-            // Column digunakan untuk menyusun widget
-            // secara vertikal (atas ke bawah).
-            //
-            child: Column(
-              // Meratakan isi ke kiri
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-                // ======================================================
-                // TEKS JUDUL
-                // ======================================================
-                //
-                // Menampilkan label informasi
-                //
-                Text(
-                  'Pengeluaran Hari Ini',
-
-                  style: TextStyle(
-                    // Warna teks
-                    color: AppColors.textDark,
-
-                    // Ukuran teks
-                    fontSize: 12,
-
-                    // Ketebalan teks
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                // ======================================================
-                // SPACING
-                // ======================================================
-                //
-                // Memberikan jarak vertikal
-                //
-                SizedBox(height: 10),
-
-                // ======================================================
-                // NILAI PENGELUARAN
-                // ======================================================
-                //
-                // Menampilkan jumlah pengeluaran hari ini
-                //
-                // Menampilkan jumlah pengeluaran hari ini secara dinamis
-                Obx(() {
-                  final txCtrl = Get.find<TransactionController>();
-                  return Text(
-                    AppHelpers.formatCurrency(txCtrl.todayExpense),
-                    style: const TextStyle(
-                      color: AppColors.textDark,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+        return Row(
+          children: [
+            // Kartu Pengeluaran Hari Ini
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: AppColors.cardWhite,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
                     ),
-                  );
-                }),
-              ],
-            ),
-          ),
-        ),
-
-        // ===============================================================
-        // SPACING ANTAR KARTU
-        // ===============================================================
-        //
-        // SizedBox digunakan untuk memberi jarak
-        // horizontal antara dua container.
-        //
-        const SizedBox(width: 15),
-
-        // ===============================================================
-        // EXPANDED KEDUA
-        // ===============================================================
-        //
-        // Kotak untuk menampilkan total pengeluaran
-        //
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(15),
-
-            decoration: BoxDecoration(
-              // Menggunakan warna primaryGreen
-              // tapi diberi transparansi agar lebih soft
-              
-              color: AppColors.cardRed.withOpacity(0.8),
-
-              borderRadius: BorderRadius.circular(15),
-            ),
-
-            // ===========================================================
-            // COLUMN UNTUK TEKS
-            // ===========================================================
-            //
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-                // Judul informasi
-                Text(
-                  'Pengeluaran Bulan Ini',
-
-                  style: TextStyle(
-                    color: AppColors.textDark,
-
-                    fontSize: 12,
-
-                    fontWeight: FontWeight.bold,
-                  ),
+                  ],
                 ),
-
-                SizedBox(height: 10),
-
-                // Total pengeluaran keseluruhan
-                // Total pengeluaran keseluruhan secara dinamis
-                Obx(() {
-                  final txCtrl = Get.find<TransactionController>();
-                  return Text(
-                    AppHelpers.formatCurrency(txCtrl.totalExpense),
-                    style: const TextStyle(
-                      color: AppColors.textDark,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pengeluaran Hari Ini',
+                      style: TextStyle(
+                        color: AppColors.textDark,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  );
-                }),
-              ],
+                    const SizedBox(height: 10),
+                    Obx(() {
+                      final txCtrl = Get.find<TransactionController>();
+                      return Text(
+                        AppHelpers.formatCurrency(txCtrl.todayExpense),
+                        style: const TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+
+            const SizedBox(width: 15),
+
+            // Kartu Pengeluaran Bulan Ini
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: AppColors.cardRed.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pengeluaran Bulan Ini',
+                      style: TextStyle(
+                        color: AppColors.textDark,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Obx(() {
+                      final txCtrl = Get.find<TransactionController>();
+                      return Text(
+                        AppHelpers.formatCurrency(txCtrl.totalExpense),
+                        style: const TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

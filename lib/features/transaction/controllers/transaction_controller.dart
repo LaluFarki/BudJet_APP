@@ -5,99 +5,120 @@ import '../models/transaction_model.dart';
 
 class TransactionController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final String _uid = FirebaseAuth.instance.currentUser!.uid;
 
-  String get _uid => FirebaseAuth.instance.currentUser?.uid ?? 'guest';
-  DocumentReference get _userDoc => _firestore.collection('users').doc(_uid);
-  CollectionReference get _txnCollection => _userDoc.collection('transactions');
-
-  // State Reaktif (Observable)
+  // RxList untuk menampung semua transaksi agar UI bisa update otomatis (Reaktif)
   var transactions = <TransactionModel>[].obs;
+  
+  // State untuk budget bulanan dari Firestore
+  var budgetBulanan = 0.0.obs;
+  // Sisa Saldo (budgetBulanan - totalExpense)
   var userBalance = 0.0.obs;
+  
+  // State untuk show/hide saldo
   var isBalanceVisible = true.obs;
 
-  // --- GETTER KOMPUTASI REAKTIF ---
-  // Menghitung pengeluaran bulan ini (akan otomatis reset tiap berganti bulan)
-  double get totalExpense {
-    final now = DateTime.now();
-    return transactions
-        .where((tx) => 
-            tx.type == 'expense' && 
-            tx.date.year == now.year && 
-            tx.date.month == now.month)
-        .fold(0.0, (sum, item) => sum + item.amount);
-  }
-
-  // Menghitung total pengeluaran khusus hari ini
-  double get todayExpense {
-    final now = DateTime.now();
-    return transactions
-        .where((tx) =>
-            tx.type == 'expense' &&
-            tx.date.year == now.year &&
-            tx.date.month == now.month &&
-            tx.date.day == now.day)
-        .fold(0.0, (sum, item) => sum + item.amount);
-  }
-
-  // --- MENGAMBIL LIST TRANSAKSI HARI INI SAJA ---
-  List<TransactionModel> get todayTransactions {
-    final now = DateTime.now();
-    return transactions.where((tx) =>
-        tx.date.year == now.year &&
-        tx.date.month == now.month &&
-        tx.date.day == now.day).toList();
-  }
+  late CollectionReference _txnCollection;
+  late DocumentReference _userDoc;
 
   @override
   void onInit() {
     super.onInit();
-    _listenToTransactions();
-    _listenToBalance();
+    _txnCollection = _firestore.collection('users').doc(_uid).collection('transactions');
+    _userDoc = _firestore.collection('users').doc(_uid);
+    
+    // Bind stream dari Firestore ke RxList
+    transactions.bindStream(
+      _txnCollection
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => TransactionModel.fromFirestore(doc))
+              .toList()),
+    );
+
+    // Listen data budgetBulanan dari Firestore
+    _userDoc.snapshots().listen((doc) {
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        budgetBulanan.value = (data['budgetBulanan'] ?? 0).toDouble();
+      }
+    });
+
+    // Update userBalance setiap kali budget atau transaksi berubah
+    everAll([budgetBulanan, transactions], (_) {
+      userBalance.value = budgetBulanan.value - totalExpense;
+    });
   }
 
-  /// Update Saldo Utama Secara Manual (Topup/Koreksi)
-  Future<void> updateBalance(double newBalance) async {
+  // Getter helper untuk filter transaksi (misal: hanya pengeluaran)
+  double get totalExpense => transactions
+      .where((t) => t.type == 'expense' && t.date.year == DateTime.now().year && t.date.month == DateTime.now().month)
+      .fold(0.0, (total, item) => total + item.amount);
+
+  double get totalIncome => transactions
+      .where((t) => t.type == 'income' && t.date.year == DateTime.now().year && t.date.month == DateTime.now().month)
+      .fold(0.0, (total, item) => total + item.amount);
+
+  // Ambil total pengeluaran hari ini
+  double get todayExpense => transactions
+      .where((t) => 
+        t.type == 'expense' && 
+        t.date.year == DateTime.now().year && 
+        t.date.month == DateTime.now().month && 
+        t.date.day == DateTime.now().day
+      )
+      .fold(0.0, (total, item) => total + item.amount);
+
+  // Ambil transaksi hari ini saja
+  List<TransactionModel> get todayTransactions {
+    final now = DateTime.now();
+    return transactions.where((t) => 
+      t.date.year == now.year && 
+      t.date.month == now.month && 
+      t.date.day == now.day
+    ).toList();
+  }
+
+  // 7 Transaksi terakhir untuk Home Screen
+  List<TransactionModel> get recentTransactions {
+    return transactions.take(7).toList();
+  }
+
+  /// FUNGSI TAMBAH: Menyimpan transaksi baru dan update Saldo secara Atomic (Transaksi Firestore)
+  Future<void> addTransaction(TransactionModel tx) async {
     try {
-      await _userDoc.set(
-        {'balance': newBalance},
-        SetOptions(merge: true),
-      );
-      Get.back(); // Tutup Pop-up (Default Dialog)
-      Get.snackbar(
-        'Berhasil', 
-        'Saldo utama berhasil diperbarui!',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      await _firestore.runTransaction((transaction) async {
+        // 1. Baca saldo user saat ini
+        final userSnapshot = await transaction.get(_userDoc);
+        double currentBalance = 0.0;
+        Map<String, dynamic> data = {};
+        if (userSnapshot.exists) {
+          data = userSnapshot.data() as Map<String, dynamic>? ?? {};
+          currentBalance = (data['balance'] ?? 0).toDouble();
+        }
+
+        // 2. Hitung saldo baru
+        double newBalance = currentBalance;
+        if (tx.type == 'expense') {
+          newBalance -= tx.amount;
+        } else {
+          newBalance += tx.amount;
+        }
+
+        // 3. Update saldo & Tambah transaksi
+        transaction.update(_userDoc, {
+          'balance': newBalance,
+          if (tx.type == 'income') 'budgetBulanan': (data['budgetBulanan'] ?? 0).toDouble() + tx.amount,
+        });
+        transaction.set(_txnCollection.doc(), tx.toFirestore());
+      });
     } catch (e) {
-      Get.snackbar(
-        'Gagal', 
-        'Terjadi kesalahan saat update saldo: $e',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar('Gagal', 'Terjadi kesalahan: $e', snackPosition: SnackPosition.BOTTOM);
     }
   }
 
-  /// FUNGSI DUMMY: Membuat 15 data sembarang yang masuk ke firebase
-  Future<void> injectDummyData() async {
-    for (int i = 0; i < 15; i++) {
-      final isIncome = i % 3 == 0;
-      final dummyTx = TransactionModel(
-        id: '',
-        amount: isIncome ? 150000.0 : 25000.0 + (i * 1000),
-        createdAt: DateTime.now(),
-        date: i < 10 ? DateTime.now() : DateTime.now().subtract(Duration(days: i)), 
-        // 10 pertama di set hari ini, sisanya mundur ke belakang
-        kategori: isIncome ? 'Gaji/Bonus' : 'Makan & Minuman',
-        note: 'Dummy data $i',
-        title: isIncome ? 'Bonus $i' : 'Pengeluaran $i',
-        type: isIncome ? 'income' : 'expense',
-      );
-      await addTransaction(dummyTx, showSnackbar: false);
-    }
-    Get.snackbar('Sukses', '15 Data Dummy berhasil disuntikkan ke Firebase!', snackPosition: SnackPosition.BOTTOM);
-  }
-
-  /// FUNGSI HAPUS: Menghapus transaksi dan otomatis merekap saldo (Refund/Deduct) secara Atomic
+  /// FUNGSI HAPUS: Menghapus transaksi dan mengembalikan saldo secara Atomic
   Future<void> deleteTransaction(TransactionModel tx) async {
     try {
       final txDocRef = _txnCollection.doc(tx.id);
@@ -105,26 +126,28 @@ class TransactionController extends GetxController {
       await _firestore.runTransaction((transaction) async {
         final userSnapshot = await transaction.get(_userDoc);
         double currentBalance = 0.0;
+        Map<String, dynamic> data = {};
         if (userSnapshot.exists) {
-          final data = userSnapshot.data() as Map<String, dynamic>? ?? {};
+          data = userSnapshot.data() as Map<String, dynamic>? ?? {};
           currentBalance = (data['balance'] ?? 0).toDouble();
         }
 
-        // Hitung saldo baru (karena dihapus, efeknya DIBALIK)
         double newBalance = currentBalance;
+        // Jika yang dihapus pengeluaran -> saldo bertambah (refund)
         if (tx.type == 'expense') {
-          newBalance += tx.amount; // Uang kembali
+          newBalance += tx.amount;
         } else {
-          newBalance -= tx.amount; // Uang ditarik balik
+          newBalance -= tx.amount;
         }
 
-        transaction.update(_userDoc, {'balance': newBalance});
+        transaction.update(_userDoc, {
+          'balance': newBalance,
+          if (tx.type == 'income') 'budgetBulanan': (data['budgetBulanan'] ?? 0).toDouble() - tx.amount,
+        });
         transaction.delete(txDocRef);
       });
-
-      Get.snackbar('Terhapus', 'Transaksi berhasil dihapus!', snackPosition: SnackPosition.BOTTOM);
     } catch (e) {
-      Get.snackbar('Gagal', 'Kesalahan menghapus: $e', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('Gagal', 'Tidak bisa menghapus: $e', snackPosition: SnackPosition.BOTTOM);
     }
   }
 
@@ -160,99 +183,9 @@ class TransactionController extends GetxController {
         transaction.update(_userDoc, {'balance': newBalance});
         transaction.update(txDocRef, newTx.toFirestore());
       });
-
-      Get.snackbar('Tersimpan', 'Perubahan transaksi berhasil disimpan!', snackPosition: SnackPosition.BOTTOM);
     } catch (e) {
       Get.snackbar('Gagal', 'Terjadi kesalahan edit: $e', snackPosition: SnackPosition.BOTTOM);
       rethrow; 
     }
   }
-
-  /// Mengambil data transaksi secara real-time dari Firestore
-  void _listenToTransactions() {
-    _txnCollection
-        .orderBy('date', descending: true) // Urutkan utama dari tanggal
-        .snapshots()
-        .listen((QuerySnapshot snapshot) {
-      final list = snapshot.docs
-          .map((doc) => TransactionModel.fromFirestore(doc))
-          .toList();
-      
-      // Sort tambahan: Jika tanggal sama, urutkan berdasarkan waktu diinput (terbaru di atas)
-      list.sort((a, b) {
-        final dateCmp = b.date.compareTo(a.date);
-        if (dateCmp != 0) return dateCmp;
-        return b.createdAt.compareTo(a.createdAt);
-      });
-      
-      transactions.value = list;
-    });
-  }
-
-  /// Mengambil data saldo user_farki secara real-time
-  void _listenToBalance() {
-    _userDoc
-        .snapshots()
-        .listen((DocumentSnapshot doc) {
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>? ?? {};
-        // Memastikan validasi .toDouble() untuk field balance
-        userBalance.value = (data['balance'] ?? 0).toDouble();
-      } else {
-        userBalance.value = 0.0;
-      }
-    });
-  }
-
-  /// Menambahkan Transaksi baru sekaligus Update Saldo Otomatis
-  Future<void> addTransaction(TransactionModel transaction, {bool showSnackbar = true}) async {
-    try {
-      // Menggunakan runTransaction agar proses Read & Write dilakukan secara bersamaan dengan aman
-      await _firestore.runTransaction((Transaction tx) async {
-        DocumentReference userRef = _userDoc;
-        // Membuat referensi dokumen baru di transaksi
-        DocumentReference txnRef = _txnCollection.doc();
-
-        DocumentSnapshot userSnapshot = await tx.get(userRef);
-
-        double currentBalance = 0.0;
-        if (userSnapshot.exists) {
-          final data = userSnapshot.data() as Map<String, dynamic>? ?? {};
-          // Validasi tipe data saat membaca dari Firestore
-          currentBalance = (data['balance'] ?? 0).toDouble();
-        }
-
-        // Hitung Saldo Baru
-        double newBalance = currentBalance;
-        if (transaction.type == 'income') {
-          newBalance += transaction.amount;
-        } else if (transaction.type == 'expense') {
-          newBalance -= transaction.amount;
-        }
-
-        // Simpan update saldo secara aman
-        tx.set(userRef, {'balance': newBalance}, SetOptions(merge: true));
-
-        // Simpan dokumen model transaksi ke Firestore
-        final txMap = transaction.toFirestore();
-        tx.set(txnRef, txMap);
-      });
-
-      if (showSnackbar) {
-        Get.snackbar(
-          'Berhasil',
-          'Transaksi sukses ditambahkan!',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-      }
-    } catch (e) {
-      Get.snackbar(
-        'Gagal',
-        'Terjadi kesalahan saat menambahkan transaksi: $e',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  }
-
-  // (Old deleteTransaction dihapus karena sudah digantikan oleh fungsi atomic di atas)
 }

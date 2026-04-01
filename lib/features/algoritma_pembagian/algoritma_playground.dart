@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 // Sesuaikan dengan nama package kamu
-import 'package:flutter_application_1/features/algoritma_pembagian/algoritma_pembagian.dart';
-import 'package:flutter_application_1/features/algoritma_pembagian/utils/date_formatter.dart';
+import 'package:budjet/features/algoritma_pembagian/algoritma_pembagian.dart';
 
 /// ─────────────────────────────────────────────────────────────
 /// PLAYGROUND — Test Algoritma Pembagian Budget
@@ -407,8 +406,6 @@ class _AlgoritmaPlaygroundState extends State<AlgoritmaPlayground> {
 
     final ringkasanHarian =
         _transaksiCtrl.ringkasanHariIni();
-    final ringkasanBulanan =
-        _transaksiCtrl.ringkasanBulanan(DateTime.now());
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -585,7 +582,7 @@ class _AlgoritmaPlaygroundState extends State<AlgoritmaPlayground> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2)),
         ],
@@ -620,7 +617,7 @@ class _AlgoritmaPlaygroundState extends State<AlgoritmaPlayground> {
         children: [
           Text(label,
               style: TextStyle(
-                  color: textColor.withOpacity(0.7), fontSize: 12)),
+                  color: textColor.withValues(alpha: 0.7), fontSize: 12)),
           const SizedBox(height: 4),
           Text(value,
               style: TextStyle(

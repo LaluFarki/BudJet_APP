@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../transaction/controllers/transaction_controller.dart';
 import '../controllers/profile_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -31,7 +32,7 @@ class ProfileScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withValues(alpha: 0.15),
                         blurRadius: 20,
                         spreadRadius: 2,
                         offset: const Offset(0, 5),
@@ -123,34 +124,93 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.logout_rounded,
                   iconColor: const Color(0xFFEC6A6A),
                   iconBgColor: const Color(0xFFFFECEC),
-                  onTap: () {
-                    // TODO: Aksi Log Out
-                  },
+                  onTap: () => _showLogoutConfirmation(context),
                 ),
                 const SizedBox(height: 32),
-                TextButton.icon(
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textGrey,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  onPressed: () {
-                    final txCtrl = Get.find<TransactionController>();
-                    txCtrl.injectDummyData();
-                  },
-                  icon: const Icon(Icons.cloud_upload_outlined, size: 20),
-                  label: const Text(
-                    "Suntik Data Dummy",
-                    style: TextStyle(
-                      fontWeight: FontWeight.normal,
-                      fontSize: 14,
-                      color: Color.fromARGB(255, 30, 30, 30),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showLogoutConfirmation(BuildContext context) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Ikon Peringatan
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFECEC),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFEC6A6A), size: 40),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Konfirmasi Logout',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Karena kami sedang dalam tahap pengembangan awal, jika anda log out maka akun anda akan hilang.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFFEC6A6A),
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 32),
+              // Tombol Aksi
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Get.back(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.clear();
+                        await prefs.setBool('isOnboardingDone', false);
+                        await FirebaseAuth.instance.signOut();
+                        
+                        Get.deleteAll(force: true);
+                        Get.offAllNamed('/awal');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEC6A6A),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Keluar', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -172,7 +232,7 @@ class ProfileScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               spreadRadius: 1,
               offset: const Offset(0, 2),

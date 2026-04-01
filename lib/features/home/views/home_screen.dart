@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_helpers.dart';
 import '../../transaction/controllers/transaction_controller.dart';
@@ -9,10 +9,12 @@ import 'dart:io';
 
 import 'widgets/balance_card.dart';
 import 'widgets/expense_summary.dart';
-import 'widgets/finance_menu.dart';
+import 'widgets/category_list.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onProfileTap;
+
+  const HomeScreen({super.key, this.onProfileTap});
 
   @override
   Widget build(BuildContext context) {
@@ -31,55 +33,59 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Obx(() => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Selamat Pagi',
-                        style: TextStyle(color: AppColors.textGrey),
-                      ),
-                      Text(
-                        profileCtrl.name.value,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+              GestureDetector(
+                onTap: onProfileTap,
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Obx(() => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Selamat Pagi',
+                          style: TextStyle(color: AppColors.textGrey),
                         ),
-                      ),
-                    ],
-                  )),
-                  Obx(() {
-                    final path = profileCtrl.profileImagePath.value;
-                    // Dukungan avatar emoji (format "avatar:0" s/d "avatar:4")
-                    const avatarEmojis = ['🐱', '🐻', '🦊', '🐰', '🐼'];
-                    if (path.startsWith('avatar:')) {
-                      final idx = int.tryParse(path.split(':').last) ?? 0;
-                      final emoji = avatarEmojis[idx.clamp(0, 4)];
-                      const avatarColors = [
-                        Color(0xFFFCE4EC), Color(0xFFFFF3E0), Color(0xFFFFF9C4),
-                        Color(0xFFF3E5F5), Color(0xFFE8F5E9),
-                      ];
-                      return CircleAvatar(
-                        radius: 25,
-                        backgroundColor: avatarColors[idx.clamp(0, 4)],
-                        child: Text(emoji, style: const TextStyle(fontSize: 24)),
-                      );
-                    } else if (path.isNotEmpty) {
-                      return CircleAvatar(
-                        radius: 25,
-                        backgroundImage: FileImage(File(path)),
-                      );
-                    } else {
-                      return const CircleAvatar(
-                        radius: 25,
-                        backgroundColor: Colors.white,
-                        child: Icon(Icons.person, color: Colors.grey),
-                      );
-                    }
-                  }),
-                ],
+                        Text(
+                          profileCtrl.name.value,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    )),
+                    Obx(() {
+                      final path = profileCtrl.profileImagePath.value;
+                      // Dukungan avatar emoji (format "avatar:0" s/d "avatar:4")
+                      const avatarEmojis = ['🐱', '🐻', '🦊', '🐰', '🐼'];
+                      if (path.startsWith('avatar:')) {
+                        final idx = int.tryParse(path.split(':').last) ?? 0;
+                        final emoji = avatarEmojis[idx.clamp(0, 4)];
+                        const avatarColors = [
+                          Color(0xFFFCE4EC), Color(0xFFFFF3E0), Color(0xFFFFF9C4),
+                          Color(0xFFF3E5F5), Color(0xFFE8F5E9),
+                        ];
+                        return CircleAvatar(
+                          radius: 25,
+                          backgroundColor: avatarColors[idx.clamp(0, 4)],
+                          child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                        );
+                      } else if (path.isNotEmpty) {
+                        return CircleAvatar(
+                          radius: 25,
+                          backgroundImage: FileImage(File(path)),
+                        );
+                      } else {
+                        return const CircleAvatar(
+                          radius: 25,
+                          backgroundColor: Colors.white,
+                          child: Icon(Icons.person, color: Colors.grey),
+                        );
+                      }
+                    }),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -91,13 +97,8 @@ class HomeScreen extends StatelessWidget {
               const ExpenseSummary(),
               const SizedBox(height: 25),
 
-              // 4. Menu Keuangan
-              const Text(
-                "Keuangan",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 15),
-              const FinanceMenu(),
+              // 4. Kategori Budget (Horizontal List)
+              const CategoryListWidget(),
               const SizedBox(height: 25),
 
               // 5. Header Daftar Transaksi + Tombol "Lihat Semua"
@@ -105,12 +106,12 @@ class HomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    "Riwayat Transaksi Hari Ini",
+                    "Riwayat Transaksi",
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                  // Tombol navigasi ke TodayTransactionsScreen
+                  // Tombol navigasi ke full History Screen yg sebelumnya ada di tombol Riwayat
                   GestureDetector(
-                    onTap: () => Get.toNamed('/today-tx'),
+                    onTap: () => Get.toNamed('/riwayat-transaksi'),
                     child: const Text(
                       "Lihat Semua",
                       style: TextStyle(
@@ -129,15 +130,15 @@ class HomeScreen extends StatelessWidget {
               // ======================================================
               Obx(() {
                 final txController = Get.find<TransactionController>();
-                final todayTxs = txController.todayTransactions;
+                final allTxs = txController.transactions;
 
-                // Jika hari ini belum ada transaksi sama sekali
-                if (todayTxs.isEmpty) {
+                // Jika belum ada transaksi sama sekali
+                if (allTxs.isEmpty) {
                   return const Center(
                     child: Padding(
                       padding: EdgeInsets.all(30.0),
                       child: Text(
-                        'Belum ada transaksi hari ini.',
+                        'Belum ada transaksi.',
                         style: TextStyle(
                           color: AppColors.textGrey,
                           fontStyle: FontStyle.italic,
@@ -147,13 +148,16 @@ class HomeScreen extends StatelessWidget {
                   );
                 }
 
+                // Tampilkan maksimal 7 transaksi terbaru
+                final displayTxs = allTxs.length > 7 ? allTxs.sublist(0, 7) : allTxs;
+
                 // Render List secara dinamis tanpa Scroll karena di dalam SingleChildScrollView
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: todayTxs.length > 7 ? 7 : todayTxs.length,
+                  itemCount: displayTxs.length,
                   itemBuilder: (context, index) {
-                    final tx = todayTxs[index];
+                    final tx = displayTxs[index];
                     final isIncome = tx.type == 'income';
                     final catIcon = AppHelpers.getCategoryIcon(
                       tx.kategori,
@@ -164,31 +168,8 @@ class HomeScreen extends StatelessWidget {
                       tx.title,
                     );
 
-                    return Slidable(
-                      key: ValueKey(tx.id),
-                      endActionPane: ActionPane(
-                        motion: const ScrollMotion(),
-                        children: [
-                          SlidableAction(
-                            onPressed: (context) {
-                              Get.toNamed('/add-tx', arguments: tx);
-                            },
-                            backgroundColor: const Color(0xFFDCE775),
-                            foregroundColor: AppColors.textDark,
-                            icon: Icons.edit_outlined,
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          SlidableAction(
-                            onPressed: (context) {
-                              txController.deleteTransaction(tx);
-                            },
-                            backgroundColor: const Color(0xFFFF697A),
-                            foregroundColor: Colors.white,
-                            icon: Icons.delete_outline,
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                        ],
-                      ),
+                    return GestureDetector(
+                      onTap: () => _showTransactionOptions(context, tx, txController),
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
@@ -197,7 +178,7 @@ class HomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.grey.withOpacity(0.08),
+                              color: Colors.grey.withValues(alpha: 0.08),
                               blurRadius: 10,
                               offset: const Offset(0, 5),
                             ),
@@ -209,7 +190,7 @@ class HomeScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: catColor.withOpacity(0.15),
+                                color: catColor.withValues(alpha: 0.15),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(catIcon, color: catColor),
@@ -269,6 +250,120 @@ class HomeScreen extends StatelessWidget {
       // floatingActionButton: ...
       // floatingActionButtonLocation: ...
       // bottomNavigationBar: ...
+    );
+  }
+
+  void _showTransactionOptions(BuildContext context, dynamic tx, TransactionController txController) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Judul
+            Text(
+              tx.title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${tx.kategori} • ${AppHelpers.formatCurrency(tx.amount)}',
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textGrey,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Tombol Edit
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Get.toNamed('/add-tx', arguments: tx);
+                },
+                icon: const Icon(Icons.edit_outlined, size: 20),
+                label: const Text('Edit Transaksi'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDCE775),
+                  foregroundColor: AppColors.textDark,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Tombol Hapus
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  // Konfirmasi hapus
+                  Get.defaultDialog(
+                    title: 'Hapus Transaksi?',
+                    titleStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    middleText: 'Transaksi "${tx.title}" akan dihapus permanen.',
+                    textConfirm: 'Hapus',
+                    textCancel: 'Batal',
+                    confirmTextColor: Colors.white,
+                    buttonColor: const Color(0xFFFF697A),
+                    cancelTextColor: Colors.grey,
+                    onConfirm: () {
+                      txController.deleteTransaction(tx);
+                      Get.back();
+                      Get.snackbar(
+                        'Berhasil',
+                        'Transaksi berhasil dihapus',
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: const Color(0xFF4CAF50),
+                        colorText: Colors.white,
+                        margin: const EdgeInsets.all(16),
+                        borderRadius: 12,
+                        duration: const Duration(seconds: 2),
+                      );
+                    },
+                  );
+                },
+                icon: const Icon(Icons.delete_outline, size: 20),
+                label: const Text('Hapus Transaksi'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF697A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

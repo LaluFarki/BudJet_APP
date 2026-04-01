@@ -25,7 +25,7 @@ class DataDiriScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFD4F069).withOpacity(0.4),
+                      color: const Color(0xFFD4F069).withValues(alpha: 0.4),
                       blurRadius: 25,
                       spreadRadius: 5,
                       offset: const Offset(0, 5),
@@ -112,7 +112,7 @@ class DataDiriScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(100),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFD4F069).withOpacity(0.5),
+                            color: const Color(0xFFD4F069).withValues(alpha: 0.5),
                             blurRadius: 15,
                             spreadRadius: 2,
                             offset: const Offset(0, 5),
@@ -186,19 +186,10 @@ class DataDiriScreen extends StatelessWidget {
         centerTitle: true,
         backgroundColor: AppColors.backgroundLight,
         elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16.0),
-          child: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back, color: AppColors.textDark, size: 20),
-            ),
-            onPressed: () => Get.back(),
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textDark, size: 22),
+          onPressed: () => Get.back(),
         ),
       ),
       body: Obx(() {
@@ -210,18 +201,6 @@ class DataDiriScreen extends StatelessWidget {
                 label: 'Nama',
                 value: profileCtrl.name.value,
                 onEdit: () => _showEditDialog(context, 'Nama', profileCtrl.name.value, (val) => profileCtrl.updateName(val)),
-              ),
-              const SizedBox(height: 16),
-              _buildDataCard(
-                label: 'Email',
-                value: profileCtrl.email.value,
-                onEdit: () => _showEditDialog(context, 'Email', profileCtrl.email.value, (val) => profileCtrl.updateEmail(val)),
-              ),
-              const SizedBox(height: 16),
-              _buildDataCard(
-                label: 'Sandi',
-                value: '***********', // Tetap disamarkan di UI
-                onEdit: () => _showEditDialog(context, 'Katasandi', '', (val) => profileCtrl.updatePassword(val)),
               ),
             ],
           ),
@@ -242,7 +221,7 @@ class DataDiriScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             spreadRadius: 1,
             offset: const Offset(0, 2),
