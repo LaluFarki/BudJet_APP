@@ -52,12 +52,18 @@ class DataDiriScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD4F069),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: const Text(
-                    'Kembali',
-                    style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 16),
+                    'Simpan',
+                    style: TextStyle(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
@@ -68,12 +74,19 @@ class DataDiriScreen extends StatelessWidget {
     );
   }
 
-  void _showEditDialog(BuildContext context, String title, String currentValue, Function(String) onSave) {
-    final TextEditingController textCtrl = TextEditingController(text: currentValue);
+  void _showEditDialog(
+    BuildContext context,
+    String title,
+    String currentValue,
+    Function(String) onSave,
+  ) {
+    final TextEditingController textCtrl = TextEditingController(
+      text: currentValue,
+    );
     if (title.toLowerCase().contains('sandi')) {
       textCtrl.clear();
     }
-    
+
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -87,19 +100,36 @@ class DataDiriScreen extends StatelessWidget {
               TextField(
                 controller: textCtrl,
                 obscureText: title.toLowerCase().contains('sandi'),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textDark),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: AppColors.textDark,
+                ),
                 decoration: InputDecoration(
                   labelText: title,
-                  labelStyle: const TextStyle(color: Color(0xFF949BA5), fontSize: 16, fontWeight: FontWeight.normal),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFF949BA5),
+                    fontSize: 16,
+                    fontWeight: FontWeight.normal,
+                  ),
                   floatingLabelBehavior: FloatingLabelBehavior.always,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5),
+                    borderSide: BorderSide(
+                      color: Colors.grey.shade200,
+                      width: 1.5,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
-                    borderSide: const BorderSide(color: Color(0xFFD4F069), width: 2),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFD4F069),
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -107,12 +137,39 @@ class DataDiriScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textDark,
+                        side: BorderSide(
+                          color: Colors.grey.shade300,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text(
+                        'Kembali',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(100),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFD4F069).withValues(alpha: 0.5),
+                            color: const Color(
+                              0xFFD4F069,
+                            ).withValues(alpha: 0.5),
                             blurRadius: 15,
                             spreadRadius: 2,
                             offset: const Offset(0, 5),
@@ -126,35 +183,30 @@ class DataDiriScreen extends StatelessWidget {
                             Get.back(); // tutup pop up edit
                             _showSuccessDialog('$title Berhasil Dirubah');
                           } else {
-                            Get.snackbar('Error', '$title tidak boleh kosong', snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(12));
+                            Get.snackbar(
+                              'Error',
+                              '$title tidak boleh kosong',
+                              snackPosition: SnackPosition.BOTTOM,
+                              margin: const EdgeInsets.all(12),
+                            );
                           }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFD4F069),
                           elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(100),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                         child: const Text(
                           'Simpan',
-                          style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                            color: AppColors.textDark,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textDark,
-                        side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text(
-                        'Kembali',
-                        style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ),
                   ),
@@ -187,8 +239,11 @@ class DataDiriScreen extends StatelessWidget {
         backgroundColor: AppColors.backgroundLight,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
-              color: AppColors.textDark, size: 22),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: AppColors.textDark,
+            size: 22,
+          ),
           onPressed: () => Get.back(),
         ),
       ),
@@ -200,7 +255,12 @@ class DataDiriScreen extends StatelessWidget {
               _buildDataCard(
                 label: 'Nama',
                 value: profileCtrl.name.value,
-                onEdit: () => _showEditDialog(context, 'Nama', profileCtrl.name.value, (val) => profileCtrl.updateName(val)),
+                onEdit: () => _showEditDialog(
+                  context,
+                  'Nama',
+                  profileCtrl.name.value,
+                  (val) => profileCtrl.updateName(val),
+                ),
               ),
             ],
           ),
@@ -260,11 +320,7 @@ class DataDiriScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: const Padding(
               padding: EdgeInsets.all(8.0),
-              child: Icon(
-                Icons.edit,
-                color: Color(0xFFA1A9B3),
-                size: 20,
-              ),
+              child: Icon(Icons.edit, color: Color(0xFFA1A9B3), size: 20),
             ),
           ),
         ],
