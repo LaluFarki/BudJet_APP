@@ -1,3 +1,5 @@
+import 'package:budjet/features/algoritma_pembagian/smart_budget_engine.dart';
+import 'package:budjet/features/algoritma_pembagian/smart_budget_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,27 +10,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../budget/views/widgets/budget_donut_chart.dart';
 import '../../../../core/utils/app_helpers.dart';
 
-/// Layar 3 dari 3 (onboarding): Analisis & konfirmasi pembagian budget.
-/// Menerima data dari LayarBudgetKategori dan menampilkan:
-/// - Donut chart persentase per kategori
-/// - Rincian Budget Bulanan per kategori
-/// - Rincian Budget Harian (alokasi / 30)
-///
-/// Tombol "Simpan" menyimpan semua data ke Firestore dan mengarahkan ke Home.
 class LayarAnalisisBudget extends StatefulWidget {
   final double budgetBulanan;
   final double budgetHarian;
   final DateTime bulan;
-  final List<String> kategoriList;
-  final Map<String, double> allocations; // {namaKategori: nominal}
+  final List<BudgetCategory> categories;
 
   const LayarAnalisisBudget({
     super.key,
     required this.budgetBulanan,
     required this.budgetHarian,
     required this.bulan,
-    required this.kategoriList,
-    required this.allocations,
+    required this.categories,
   });
 
   @override
@@ -37,6 +30,7 @@ class LayarAnalisisBudget extends StatefulWidget {
 
 class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
   bool _isSaving = false;
+  final SmartBudgetEngine _engine = SmartBudgetEngine();
 
   final _currencyFormat = NumberFormat.currency(
     locale: 'id_ID',
@@ -59,6 +53,17 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
     return _currencyFormat.format(val);
   }
 
+  String _periodSuffix(BudgetPeriod period) {
+    switch (period) {
+      case BudgetPeriod.daily:
+        return 'hari';
+      case BudgetPeriod.weekly:
+        return 'minggu';
+      case BudgetPeriod.monthly:
+        return 'bulan';
+    }
+  }
+
   Future<void> _simpan() async {
     if (_isSaving) return;
     setState(() => _isSaving = true);
@@ -71,42 +76,55 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
         if (uid == null) throw Exception('Gagal membuat sesi pengguna baru.');
       }
 
-      // Susun data kategori dengan persentase & budget harian
-      final List<Map<String, dynamic>> categories = [];
-      for (final nama in widget.kategoriList) {
-        final alokasi = widget.allocations[nama] ?? 0;
-        categories.add({
-          'nama': nama,
-          'alokasi': alokasi,
+      final summary = _engine.calculateSummary(
+        monthlyBudget: widget.budgetBulanan,
+        categories: widget.categories,
+        transactions: [],
+      );
+
+      final List<Map<String, dynamic>> categories = summary.categories.map((c) {
+        return {
+          'id': c.categoryId,
+          'nama': c.name,
+          'periode': c.period.name,
+          'alokasiInput': c.allocationAmount,
+          'alokasiBulanan': c.monthlyEquivalent,
+          'terpakai': c.spentAmount,
+          'sisa': c.remainingAmount,
           'persentase': widget.budgetBulanan > 0
-              ? (alokasi / widget.budgetBulanan * 100).roundToDouble()
+              ? (c.monthlyEquivalent / widget.budgetBulanan * 100)
+                    .roundToDouble()
               : 0.0,
-          'harian': (alokasi / 30).roundToDouble(),
-        });
-      }
+          'harian': (c.monthlyEquivalent / 30).roundToDouble(),
+          'isAutoCategory': c.isAutoCategory,
+        };
+      }).toList();
 
-      // Simpan ke Firestore — satu dokumen di users/{uid}
-      // Kita hilangkan await agar tidak memblokir UI jika internet lambat / Firestore nyangkut
-      FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'budgetBulanan': widget.budgetBulanan,
-        'budgetHarian': widget.budgetHarian,
-        'bulan': widget.bulan.toIso8601String(),
-        'categories': categories,
-        'selectedCategories': widget.kategoriList,
-        'allocations': widget.allocations,
-        'balance': widget.budgetBulanan, // ← Saldo awal = total budget bulanan
-        'createdAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true)).catchError((e) {
-        debugPrint('Gagal sinkron budget ke Firebase: $e');
-      });
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .set({
+            'budgetBulanan': widget.budgetBulanan,
+            'budgetHarian': widget.budgetHarian,
+            'bulan': widget.bulan.toIso8601String(),
+            'categories': categories,
+            'selectedCategories': summary.categories
+                .map((c) => c.name)
+                .toList(),
+            'allocations': {
+              for (final c in summary.categories) c.name: c.monthlyEquivalent,
+            },
+            'balance': widget.budgetBulanan,
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true))
+          .catchError((e) {
+            debugPrint('Gagal sinkron budget ke Firebase: $e');
+          });
 
-      // Tandai onboarding selesai
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isOnboardingDone', true);
 
       if (!mounted) return;
-
-      // Navigasi ke Dashboard, hapus semua route sebelumnya
       Get.offAllNamed('/');
     } catch (e) {
       if (!mounted) return;
@@ -123,16 +141,23 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
 
   @override
   Widget build(BuildContext context) {
-    final kategoriList = widget.kategoriList;
     final totalBudget = widget.budgetBulanan;
 
-    // Build donut segments dari data alokasi
+    final summary = _engine.calculateSummary(
+      monthlyBudget: widget.budgetBulanan,
+      categories: widget.categories,
+      transactions: [],
+    );
+
+    final kategoriSummary = summary.categories;
+
     final List<DonutSegment> segments = totalBudget > 0
-        ? kategoriList.asMap().entries.map((e) {
-            final alokasi = widget.allocations[e.value] ?? 0;
+        ? kategoriSummary.asMap().entries.map((e) {
+            final category = e.value;
+
             return DonutSegment(
-              percentage: alokasi / totalBudget,
-              color: _colorForIndex(e.value, e.key),
+              percentage: category.monthlyEquivalent / totalBudget,
+              color: _colorForIndex(category.name, e.key),
             );
           }).toList()
         : [const DonutSegment(percentage: 1.0, color: Color(0xFFF0F0F0))];
@@ -160,7 +185,11 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_back, color: Color(0xFF1E1E1E), size: 20),
+              child: const Icon(
+                Icons.arrow_back,
+                color: Color(0xFF1E1E1E),
+                size: 20,
+              ),
             ),
             onPressed: () => Navigator.pop(context),
           ),
@@ -175,7 +204,6 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              // ── 1. Kartu Donut Chart ──
               _buildCard(
                 child: Column(
                   children: [
@@ -185,19 +213,20 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
                       segments: segments,
                     ),
                     const SizedBox(height: 28),
-                    // Legend
                     Wrap(
                       spacing: 16,
                       runSpacing: 8,
                       alignment: WrapAlignment.center,
-                      children: kategoriList.asMap().entries.map((e) {
-                        final alokasi = widget.allocations[e.value] ?? 0;
+                      children: kategoriSummary.asMap().entries.map((e) {
+                        final category = e.value;
                         final pct = totalBudget > 0
-                            ? (alokasi / totalBudget * 100).round()
+                            ? (category.monthlyEquivalent / totalBudget * 100)
+                                  .round()
                             : 0;
+
                         return _buildLegend(
-                          color: _colorForIndex(e.value, e.key),
-                          title: e.value.toUpperCase(),
+                          color: _colorForIndex(category.name, e.key),
+                          title: category.name.toUpperCase(),
                           value: '$pct%',
                         );
                       }).toList(),
@@ -208,46 +237,64 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
 
               const SizedBox(height: 20),
 
-              // ── 2. Rincian Budget Bulanan ──
               _buildCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader('Rincian Budget Bulanan', kategoriList.length),
+                    _buildSectionHeader(
+                      'Rincian Budget Bulanan',
+                      kategoriSummary.length,
+                    ),
                     const SizedBox(height: 20),
-                    ...kategoriList.asMap().entries.map((e) => Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _buildDetailRow(
-                            icon: _iconForKategori(e.value),
-                            iconBg: _iconBgFor(e.value, e.key),
-                            iconColor: _colorForIndex(e.value, e.key),
-                            title: e.value,
-                            amount: _currencyFormat.format(widget.allocations[e.value] ?? 0),
-                          ),
-                        )),
+                    ...kategoriSummary
+                        .where((c) => !c.isAutoCategory)
+                        .toList()
+                        .asMap()
+                        .entries
+                        .map((e) {
+                          final category = e.value;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildDetailRow(
+                              icon: _iconForKategori(category.name),
+                              iconBg: _iconBgFor(category.name, e.key),
+                              iconColor: _colorForIndex(category.name, e.key),
+                              title:
+                                  '${category.name} (${category.period.label})',
+                              amount: _currencyFormat.format(
+                                category.monthlyEquivalent,
+                              ),
+                            ),
+                          );
+                        }),
                   ],
                 ),
               ),
 
               const SizedBox(height: 20),
 
-              // ── 3. Rincian Budget Harian ──
               _buildCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader('Rincian Budget Harian', kategoriList.length),
+                    _buildSectionHeader(
+                      'Budget per Kategori (Sesuai Periode)',
+                      kategoriSummary.length,
+                    ),
                     const SizedBox(height: 20),
-                    ...kategoriList.asMap().entries.map((e) {
-                      final harian = ((widget.allocations[e.value] ?? 0) / 30);
+                    ...kategoriSummary.asMap().entries.map((e) {
+                      final category = e.value;
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: _buildDetailRow(
-                          icon: _iconForKategori(e.value),
-                          iconBg: _iconBgFor(e.value, e.key),
-                          iconColor: _colorForIndex(e.value, e.key),
-                          title: e.value,
-                          amount: _currencyFormat.format(harian),
+                          icon: _iconForKategori(category.name),
+                          iconBg: _iconBgFor(category.name, e.key),
+                          iconColor: _colorForIndex(category.name, e.key),
+                          title: category.name,
+                          amount:
+                              '${_currencyFormat.format(category.allocationAmount)}/${_periodSuffix(category.period)}',
                         ),
                       );
                     }),
@@ -257,7 +304,6 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
 
               const SizedBox(height: 24),
 
-              // ── Footer ──
               const Text(
                 'Sudah Cocok?',
                 style: TextStyle(
@@ -266,9 +312,9 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
                   color: Colors.grey,
                 ),
               ),
+
               const SizedBox(height: 14),
 
-              // ── Tombol Simpan ──
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -301,6 +347,7 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
                         ),
                 ),
               ),
+
               const SizedBox(height: 32),
             ],
           ),
