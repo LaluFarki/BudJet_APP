@@ -1,24 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-// Sesuaikan dengan nama package kamu
 import 'package:budjet/features/algoritma_pembagian/algoritma_pembagian.dart';
 import 'layar_analisis_budget.dart';
 import '../../../../core/utils/app_helpers.dart';
 
-/// Layar 2 dari 2: Bagi budget per kategori + validasi + simpan ke Firebase.
-///
-/// Menerima dari LayarFormAnggaran:
-/// - [budgetBulanan]  : total budget (double)
-/// - [bulan]          : bulan berlaku (DateTime)
-/// - [kategoriList]   : kategori yang dipilih user di Page 1
-///
-/// Aturan utama: total semua alokasi HARUS tepat = budgetBulanan.
-/// Tombol Simpan baru aktif kalau sisa = Rp 0.
-///
-/// Setelah simpan, data tersedia di Firestore:
-///   budgets/{userId}/{yyyy-MM}/
-///     budgetBulanan, bulan, categories[], totalPengeluaran, createdAt
 class LayarBudgetKategori extends StatefulWidget {
   final double budgetBulanan;
   final DateTime bulan;
@@ -36,13 +22,9 @@ class LayarBudgetKategori extends StatefulWidget {
 }
 
 class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
-  // ─────────────────────────────────────────
-  // STATE
-  // ─────────────────────────────────────────
-
   late List<TextEditingController> controllers;
+  late List<String> periodeList;
 
-  /// Controller algoritma — menghitung budget harian, sisa, dll.
   late final BudgetController _budgetCtrl;
 
   final NumberFormat _currencyFormat = NumberFormat.currency(
@@ -51,11 +33,6 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     decimalDigits: 0,
   );
 
-  // ─────────────────────────────────────────
-  // COMPUTED (dari input user)
-  // ─────────────────────────────────────────
-
-  /// Total yang sudah dialokasikan user ke semua kategori.
   double get _totalDialokasikan {
     double total = 0;
     for (final c in controllers) {
@@ -64,35 +41,33 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     return total;
   }
 
-  /// Sisa budget yang belum dialokasikan (bisa negatif = over).
   double get _sisaBelumDialokasikan =>
       widget.budgetBulanan - _totalDialokasikan;
 
-  /// True kalau total sudah pas = budgetBulanan (toleransi < Rp 1 untuk floating point).
   bool get _isValid => _sisaBelumDialokasikan.abs() < 1;
-
-  // ─────────────────────────────────────────
-  // LIFECYCLE
-  // ─────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
 
-    // Inisialisasi BudgetController dengan data dari Page 1
     _budgetCtrl = BudgetController();
     _budgetCtrl.inisialisasi(
       budgetBulanan: widget.budgetBulanan,
       bulan: widget.bulan,
     );
 
-    // Buat controller untuk tiap kategori, pasang listener
     controllers = List.generate(
       widget.kategoriList.length,
-      (_) => TextEditingController(),
+          (_) => TextEditingController(),
     );
+
+    periodeList = List.generate(
+      widget.kategoriList.length,
+          (_) => 'Mingguan',
+    );
+
     for (final c in controllers) {
-      c.addListener(() => setState(() {})); // update sisa realtime
+      c.addListener(() => setState(() {}));
     }
   }
 
@@ -104,17 +79,11 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     super.dispose();
   }
 
-  // ─────────────────────────────────────────
-  // HELPERS
-  // ─────────────────────────────────────────
-
-  /// Parsing "Rp 1.200.000" → 1200000.0
   double _parseRupiah(String text) {
     final angka = text.replaceAll(RegExp(r'[^0-9]'), '');
     return double.tryParse(angka) ?? 0;
   }
 
-  /// Format angka ke "Rp 1.200.000" dan update cursor ke akhir.
   void _formatRupiah(TextEditingController controller, String value) {
     final angka = value.replaceAll(RegExp(r'[^0-9]'), '');
     if (angka.isEmpty) {
@@ -140,23 +109,18 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     return AppHelpers.getCategoryColorBg(kategori);
   }
 
-  // ─────────────────────────────────────────
-  // LANJUT KE HALAMAN ANALISIS
-  // ─────────────────────────────────────────
-
   void _lanjut() {
-    if (_sisaBelumDialokasikan > 0.5 || _sisaBelumDialokasikan < -0.5) {
+    if (!_isValid) {
       _showValidationPopup();
       return;
     }
 
-    // Kumpulkan alokasi per kategori
     final Map<String, double> allocations = {};
     for (int i = 0; i < widget.kategoriList.length; i++) {
-      allocations[widget.kategoriList[i]] = _parseRupiah(controllers[i].text);
+      allocations[widget.kategoriList[i]] =
+          _parseRupiah(controllers[i].text);
     }
 
-    // Navigasi ke Layar Analisis Budget (Layar 10)
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -173,18 +137,15 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
 
   void _showValidationPopup() {
     final sisa = _sisaBelumDialokasikan;
-    final isOver = sisa < -0.5;
-    final judul = isOver ? 'Budget Melebihi Batas' : 'Saldo Masih Tersisa';
-    final pesan = isOver
-        ? 'Total alokasi melebihi budget sebesar ${_currencyFormat.format(sisa.abs().toInt())}. Silakan kurangi alokasi Anda.'
-        : 'Saldo Anda masih tersisa ${_currencyFormat.format(sisa.toInt())},\nalokasikan semua saldo anda untuk bisa simpan';
+    final isOver = sisa < 0;
 
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: const Color(0xFFE57373), // Warna merah/salmon seperti di lampiran
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: const Color(0xFFE57373),
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -192,7 +153,9 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  judul,
+                  isOver
+                      ? 'Budget Melebihi Batas'
+                      : 'Saldo Masih Tersisa',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -201,28 +164,20 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  pesan,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    height: 1.4,
-                  ),
+                  isOver
+                      ? 'Total melebihi ${_currencyFormat.format(sisa.abs().toInt())}'
+                      : 'Sisa ${_currencyFormat.format(sisa.toInt())}',
+                  style: const TextStyle(color: Colors.white),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: const Text('OK',
+                        style: TextStyle(color: Colors.white)),
                   ),
-                ),
+                )
               ],
             ),
           ),
@@ -231,15 +186,8 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     );
   }
 
-  // ─────────────────────────────────────────
-  // BUILD
-  // ─────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
-    const int totalStep = 3;
-    const double progress = 2 / totalStep;
-
     final sisa = _sisaBelumDialokasikan;
     final isOver = sisa < 0;
 
@@ -252,87 +200,14 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
             children: [
               const SizedBox(height: 20),
 
-              // Progress Bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: const LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  backgroundColor: Color(0xFFE0E0E0),
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              const Center(
-                child: Text(
-                  'Budget Kategori',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                ),
+              const Text(
+                'Budget Kategori',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 16),
 
-              // ── Info Budget Harian (dari BudgetController) ──
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A2E),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Total Budget',
-                          style: TextStyle(color: Colors.white60, fontSize: 12),
-                        ),
-                        Text(
-                          _currencyFormat.format(widget.budgetBulanan.toInt()),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text(
-                          'Budget Harian',
-                          style: TextStyle(color: Colors.white60, fontSize: 12),
-                        ),
-                        Text(
-                          // hitungBudgetHarian() dari BudgetController
-                          _currencyFormat.format(
-                            _budgetCtrl.budgetHarian.toInt(),
-                          ),
-                          style: const TextStyle(
-                            color: Color(0xFF00D4AA),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // ── Indikator Sisa Realtime ──
-              // Ini adalah validasi utama: total harus pas = 0
+              // 🔥 INDIKATOR SISA (FINAL)
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 width: double.infinity,
@@ -394,59 +269,109 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
 
               const SizedBox(height: 16),
 
-              // ── List Kategori ──
               Expanded(
                 child: ListView.builder(
                   itemCount: widget.kategoriList.length,
                   itemBuilder: (context, index) {
                     final kategori = widget.kategoriList[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 25),
-                      child: Row(
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                          )
+                        ],
+                      ),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            radius: 25,
-                            backgroundColor: _getColorBg(kategori),
-                            child: Icon(
-                              _getIcon(kategori),
-                              color: _getColor(kategori),
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: _getColorBg(kategori),
+                                child: Icon(
+                                  _getIcon(kategori),
+                                  color: _getColor(kategori),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                kategori,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              )
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          TextField(
+                            controller: controllers[index],
+                            keyboardType: TextInputType.number,
+                            onChanged: (value) =>
+                                _formatRupiah(controllers[index], value),
+                            decoration: InputDecoration(
+                              hintText: 'Budget Anda',
+                              filled: true,
+                              fillColor: const Color(0xFFF1F3F6),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  kategori,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1E1E1E),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                TextField(
-                                  controller: controllers[index],
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (value) =>
-                                      _formatRupiah(controllers[index], value),
-                                  decoration: InputDecoration(
-                                    hintText: 'Rp 0',
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 15,
+
+                          const SizedBox(height: 12),
+
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F3F6),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: ['Harian', 'Mingguan', 'Bulanan']
+                                  .map((item) {
+                                final selected =
+                                    periodeList[index] == item;
+
+                                return Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        periodeList[index] = item;
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: selected
+                                            ? const Color(0xFFD6E85A)
+                                            : Colors.transparent,
+                                        borderRadius:
+                                        BorderRadius.circular(16),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          item,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: selected
+                                                ? Colors.black
+                                                : Colors.grey,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                      borderSide: BorderSide.none,
-                                    ),
                                   ),
-                                ),
-                              ],
+                                );
+                              }).toList(),
                             ),
                           ),
                         ],
@@ -458,22 +383,15 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
 
               const SizedBox(height: 10),
 
-              Center(
+              const Center(
                 child: Text(
                   'Sudah cocok?',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade500,
-                    letterSpacing: 0.5,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
                 ),
               ),
 
               const SizedBox(height: 15),
 
-              // ── Tombol Lanjut ──
-              // Selalu aktif secara visual (hijau), validasi ditangani di _lanjut()
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -486,7 +404,10 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: const Text('Lanjut →', style: TextStyle(fontSize: 22)),
+                  child: const Text(
+                    'Lanjut →',
+                    style: TextStyle(fontSize: 22),
+                  ),
                 ),
               ),
 

@@ -7,15 +7,6 @@ import 'package:intl/intl.dart';
 import 'layar_budget_kategori.dart';
 import '../../../../core/utils/app_helpers.dart';
 
-/// Layar 1 dari 2: Input budget bulanan + pilih kategori.
-///
-/// Setelah user tekan "Lanjut", layar ini meneruskan:
-/// - [budgetBulanan]  : nominal budget dalam double
-/// - [bulan]          : bulan yang dipilih (dari date picker)
-/// - [kategoriDipilih]: daftar nama kategori yang dicentang user
-///
-/// Semua kalkulasi (budget harian, sisa, dll) dilakukan di LayarBudgetKategori
-/// menggunakan BudgetController dari algoritma_pembagian.
 class LayarFormAnggaran extends StatefulWidget {
   const LayarFormAnggaran({super.key});
 
@@ -24,17 +15,12 @@ class LayarFormAnggaran extends StatefulWidget {
 }
 
 class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
-  // ─────────────────────────────────────────
-  // STATE
-  // ─────────────────────────────────────────
-
   DateTime? selectedDate;
   final TextEditingController _budgetController = TextEditingController();
   final NumberFormat _formatter = NumberFormat('#,###', 'id_ID');
 
   final int totalStep = 3;
 
-  /// Kategori default + kategori yang ditambah user.
   List<String> kategoriList = [
     'Makanan & Minuman',
     'Transportasi',
@@ -44,16 +30,11 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
 
   late List<bool> isSelected;
 
-  // ─────────────────────────────────────────
-  // LIFECYCLE
-  // ─────────────────────────────────────────
-
   @override
   void initState() {
     super.initState();
     isSelected = List.generate(kategoriList.length, (_) => false);
 
-    // Format input angka jadi rupiah otomatis saat user mengetik
     _budgetController.addListener(() {
       final raw = _budgetController.text.replaceAll('.', '');
       if (raw.isEmpty) return;
@@ -75,18 +56,20 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
     super.dispose();
   }
 
-  // ─────────────────────────────────────────
-  // ACTIONS
-  // ─────────────────────────────────────────
-
+  // 🔥 FINAL PERUBAHAN ADA DI SINI
   Future<void> _pilihTanggal() async {
+    final DateTime today = DateTime.now();
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: selectedDate ?? today,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      lastDate: today, // 🔥 MAKSIMAL = HARI INI
     );
-    if (picked != null) setState(() => selectedDate = picked);
+
+    if (picked != null) {
+      setState(() => selectedDate = picked);
+    }
   }
 
   void _tambahKategori() {
@@ -110,7 +93,7 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
               if (nama.isNotEmpty && !kategoriList.contains(nama)) {
                 setState(() {
                   kategoriList.add(nama);
-                  isSelected.add(true); // otomatis dicentang
+                  isSelected.add(true);
                 });
               }
               Navigator.pop(context);
@@ -122,9 +105,7 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
     );
   }
 
-  /// Validasi semua field sebelum lanjut ke Page 2.
   void _lanjut() {
-    // 1. Cek budget diisi
     final rawText = _budgetController.text.replaceAll('.', '');
     final budgetBulanan = double.tryParse(rawText) ?? 0;
     if (budgetBulanan <= 0) {
@@ -132,13 +113,11 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
       return;
     }
 
-    // 2. Cek tanggal dipilih
     if (selectedDate == null) {
       _showSnackbar('Pilih tanggal dana masuk terlebih dahulu');
       return;
     }
 
-    // 3. Cek minimal 1 kategori dipilih
     final dipilih = <String>[];
     for (int i = 0; i < kategoriList.length; i++) {
       if (isSelected[i]) dipilih.add(kategoriList[i]);
@@ -148,12 +127,10 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
       return;
     }
 
-    // ✅ Semua valid — teruskan ke Page 2
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => LayarBudgetKategori(
-          // Diteruskan ke Page 2
           budgetBulanan: budgetBulanan,
           bulan: selectedDate!,
           kategoriList: dipilih,
@@ -165,10 +142,6 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
   void _showSnackbar(String pesan) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(pesan)));
   }
-
-  // ─────────────────────────────────────────
-  // BUILD
-  // ─────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +156,6 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
             children: [
               const SizedBox(height: 20),
 
-              // Progress Bar
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(
@@ -213,7 +185,6 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
 
                       const SizedBox(height: 40),
 
-                      // Input Budget
                       const Text(
                         'Budget Anda',
                         style: TextStyle(fontWeight: FontWeight.w600),
@@ -245,7 +216,6 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
 
                       const SizedBox(height: 25),
 
-                      // Date Picker
                       const Text(
                         'Tanggal Dana Masuk',
                         style: TextStyle(fontWeight: FontWeight.w600),
@@ -269,9 +239,8 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                               Text(
                                 selectedDate == null
                                     ? 'Pilih tanggal'
-                                    : DateFormat(
-                                        'dd MMMM yyyy',
-                                      ).format(selectedDate!),
+                                    : DateFormat('dd MMMM yyyy')
+                                    .format(selectedDate!),
                               ),
                               const Icon(Icons.calendar_today),
                             ],
@@ -281,7 +250,6 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
 
                       const SizedBox(height: 30),
 
-                      // Kategori
                       const Text(
                         'Kategori Belanja',
                         style: TextStyle(fontWeight: FontWeight.w600),
@@ -308,9 +276,9 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                         runSpacing: 12,
                         children: List.generate(
                           kategoriList.length,
-                          (index) => GestureDetector(
+                              (index) => GestureDetector(
                             onTap: () => setState(
-                              () => isSelected[index] = !isSelected[index],
+                                  () => isSelected[index] = !isSelected[index],
                             ),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
@@ -332,7 +300,8 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    AppHelpers.getCategoryIcon(kategoriList[index]),
+                                    AppHelpers.getCategoryIcon(
+                                        kategoriList[index]),
                                     size: 18,
                                     color: isSelected[index]
                                         ? Colors.black87
@@ -352,7 +321,9 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                                   ),
                                   const SizedBox(width: 6),
                                   Icon(
-                                    isSelected[index] ? Icons.check_circle : Icons.add_circle_outline,
+                                    isSelected[index]
+                                        ? Icons.check_circle
+                                        : Icons.add_circle_outline,
                                     size: 14,
                                     color: isSelected[index]
                                         ? Colors.black54
@@ -373,7 +344,6 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
 
               const SizedBox(height: 15),
 
-              // Tombol Lanjut
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -386,7 +356,8 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: const Text('Lanjut', style: TextStyle(fontSize: 22)),
+                  child: const Text('Lanjut',
+                      style: TextStyle(fontSize: 22)),
                 ),
               ),
 
