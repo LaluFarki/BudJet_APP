@@ -71,12 +71,18 @@ class AddTransactionScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD4F069),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: const Text(
                     'Kembali',
-                    style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
@@ -94,7 +100,7 @@ class AddTransactionScreen extends StatelessWidget {
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
   final RxString _selectedCategory = ''.obs;
-  
+
   // Tanggal Picker
   final Rx<DateTime> _selectedDate = DateTime.now().obs;
 
@@ -109,7 +115,7 @@ class AddTransactionScreen extends StatelessWidget {
     'Transportasi',
     'Belanja',
     'Hiburan',
-    'Lainnya'
+    'Lainnya',
   ];
 
   void _loadCategories() async {
@@ -122,7 +128,10 @@ class AddTransactionScreen extends StatelessWidget {
       return;
     }
 
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
     if (doc.exists) {
       final data = doc.data() ?? {};
       final categoriesRaw = data['categories'] as List<dynamic>? ?? [];
@@ -140,7 +149,8 @@ class AddTransactionScreen extends StatelessWidget {
     }
 
     // Set default selected jika belum di-set (bukan mode edit)
-    if (_selectedCategory.value.isEmpty || !_categories.contains(_selectedCategory.value)) {
+    if (_selectedCategory.value.isEmpty ||
+        !_categories.contains(_selectedCategory.value)) {
       _selectedCategory.value = _categories.first;
     }
   }
@@ -150,7 +160,7 @@ class AddTransactionScreen extends StatelessWidget {
       context: context,
       initialDate: _selectedDate.value,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2101),
+      lastDate: DateTime.now(), // Batasi maksimal hari ini
     );
     if (picked != null && picked != _selectedDate.value) {
       _selectedDate.value = picked;
@@ -163,10 +173,15 @@ class AddTransactionScreen extends StatelessWidget {
       final TransactionModel? existingTx = Get.arguments as TransactionModel?;
 
       // Hapus karakter non-digit agar parse uang aman
-      final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
-      
+      final cleanAmount = _amountController.text.replaceAll(
+        RegExp(r'[^0-9]'),
+        '',
+      );
+
       final newTransaction = TransactionModel(
-        id: existingTx?.id ?? '', // Diabaikan oleh Firestore create auto id jika kosong
+        id:
+            existingTx?.id ??
+            '', // Diabaikan oleh Firestore create auto id jika kosong
         amount: double.parse(cleanAmount.isEmpty ? '0' : cleanAmount),
         createdAt: existingTx?.createdAt ?? DateTime.now(),
         date: _selectedDate.value,
@@ -205,7 +220,11 @@ class AddTransactionScreen extends StatelessWidget {
         ),
         title: Text(
           Get.arguments != null ? 'Edit Transaksi' : 'Tambah Transaksi',
-          style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 18),
+          style: const TextStyle(
+            color: AppColors.textDark,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
         centerTitle: true,
       ),
@@ -217,7 +236,10 @@ class AddTransactionScreen extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 10,
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -225,50 +247,90 @@ class AddTransactionScreen extends StatelessWidget {
                     children: [
                       // === Nama Pengeluaran ===
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                          border: Border.all(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                          ),
                         ),
                         child: TextFormField(
                           controller: _titleController,
                           decoration: const InputDecoration(
                             labelText: 'Nama Pengeluaran',
-                            labelStyle: TextStyle(color: Colors.grey, fontSize: 13),
+                            labelStyle: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 13,
+                            ),
                             border: InputBorder.none,
-                            suffixIcon: Icon(Icons.edit_outlined, color: Colors.grey, size: 20),
+                            suffixIcon: Icon(
+                              Icons.edit_outlined,
+                              color: Colors.grey,
+                              size: 20,
+                            ),
                           ),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          validator: (val) => val == null || val.isEmpty ? 'Isi judul' : null,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          validator: (val) =>
+                              val == null || val.isEmpty ? 'Isi judul' : null,
                         ),
                       ),
                       const SizedBox(height: 16),
 
                       // === Nominal ===
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                          border: Border.all(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                          ),
                         ),
                         child: TextFormField(
                           controller: _amountController,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
                             labelText: 'Nominal',
-                            labelStyle: TextStyle(color: Colors.grey, fontSize: 13),
+                            labelStyle: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 13,
+                            ),
                             prefixText: 'Rp ',
-                            prefixStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark),
+                            prefixStyle: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppColors.textDark,
+                            ),
                             border: InputBorder.none,
-                            suffixIcon: Icon(Icons.edit_outlined, color: Colors.grey, size: 20),
+                            suffixIcon: Icon(
+                              Icons.edit_outlined,
+                              color: Colors.grey,
+                              size: 20,
+                            ),
                           ),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                           validator: (val) {
-                            if (val == null || val.isEmpty) return 'Isi nominal';
-                            final cleanVal = val.replaceAll(RegExp(r'[^0-9]'), '');
-                            if (double.tryParse(cleanVal) == null) return 'Angka tidak valid';
+                            if (val == null || val.isEmpty)
+                              return 'Isi nominal';
+                            final cleanVal = val.replaceAll(
+                              RegExp(r'[^0-9]'),
+                              '',
+                            );
+                            if (double.tryParse(cleanVal) == null)
+                              return 'Angka tidak valid';
                             return null;
                           },
                         ),
@@ -277,56 +339,92 @@ class AddTransactionScreen extends StatelessWidget {
 
                       // === Kategori Dropdown ===
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                          border: Border.all(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Padding(
                               padding: EdgeInsets.only(top: 8, bottom: 4),
-                              child: Text('Kategori', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                              child: Text(
+                                'Kategori',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
                             ),
                             Row(
                               children: [
                                 Obx(() {
-                                  final catColor = AppHelpers.getCategoryColor(_selectedCategory.value, '');
-                                  final catIcon = AppHelpers.getCategoryIcon(_selectedCategory.value, '');
-                                  
+                                  final catColor = AppHelpers.getCategoryColor(
+                                    _selectedCategory.value,
+                                    '',
+                                  );
+                                  final catIcon = AppHelpers.getCategoryIcon(
+                                    _selectedCategory.value,
+                                    '',
+                                  );
+
                                   return Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: catColor.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: Icon(catIcon, color: catColor, size: 20),
+                                    child: Icon(
+                                      catIcon,
+                                      color: catColor,
+                                      size: 20,
+                                    ),
                                   );
                                 }),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Obx(() {
-                                    if (_categories.isEmpty || _selectedCategory.value.isEmpty) {
-                                      return const Text('Memuat...', style: TextStyle(color: Colors.grey));
+                                    if (_categories.isEmpty ||
+                                        _selectedCategory.value.isEmpty) {
+                                      return const Text(
+                                        'Memuat...',
+                                        style: TextStyle(color: Colors.grey),
+                                      );
                                     }
                                     // Jika kategori lama (dari edit) tidak ada di list, tambahkan sementara
                                     final items = _categories.toList();
-                                    if (!items.contains(_selectedCategory.value)) {
+                                    if (!items.contains(
+                                      _selectedCategory.value,
+                                    )) {
                                       items.add(_selectedCategory.value);
                                     }
                                     return DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
                                         value: _selectedCategory.value,
                                         isExpanded: true,
-                                        icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark),
+                                        icon: const Icon(
+                                          Icons.keyboard_arrow_down,
+                                          color: Colors.grey,
+                                        ),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: AppColors.textDark,
+                                        ),
                                         items: [
-                                          ...items.map((cat) => DropdownMenuItem(
-                                            value: cat,
-                                            child: Text(cat),
-                                          )),
+                                          ...items.map(
+                                            (cat) => DropdownMenuItem(
+                                              value: cat,
+                                              child: Text(cat),
+                                            ),
+                                          ),
                                           const DropdownMenuItem(
                                             value: '__ADD_NEW__',
                                             child: Text(
@@ -343,15 +441,21 @@ class AddTransactionScreen extends StatelessWidget {
                                           if (val == '__ADD_NEW__') {
                                             Get.defaultDialog(
                                               title: 'Kategori Tidak Ada?',
-                                              middleText: 'Anda akan diarahkan ke halaman Edit Budget untuk menambahkan kategori baru.',
+                                              middleText:
+                                                  'Anda akan diarahkan ke halaman Edit Budget untuk menambahkan kategori baru.',
                                               textConfirm: 'Ya, Ke Pengaturan',
                                               textCancel: 'Batal',
                                               confirmTextColor: Colors.white,
-                                              buttonColor: const Color(0xFFDCE775),
-                                              cancelTextColor: AppColors.textDark,
+                                              buttonColor: const Color(
+                                                0xFFDCE775,
+                                              ),
+                                              cancelTextColor:
+                                                  AppColors.textDark,
                                               onConfirm: () {
                                                 Get.back(); // Tutup dialog
-                                                Get.toNamed('/edit-budget'); // Pindah ke halaman edit budget
+                                                Get.toNamed(
+                                                  '/edit-budget',
+                                                ); // Pindah ke halaman edit budget
                                               },
                                             );
                                           } else if (val != null) {
@@ -373,18 +477,29 @@ class AddTransactionScreen extends StatelessWidget {
                       GestureDetector(
                         onTap: () => _selectDate(context),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                            border: Border.all(
+                              color: Colors.grey.withValues(alpha: 0.1),
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Padding(
                                 padding: EdgeInsets.only(top: 8, bottom: 4),
-                                child: Text('Tanggal', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                child: Text(
+                                  'Tanggal',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 13,
+                                  ),
+                                ),
                               ),
                               Row(
                                 children: [
@@ -394,21 +509,40 @@ class AddTransactionScreen extends StatelessWidget {
                                       color: Colors.blue.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: const Icon(Icons.calendar_today, color: Colors.blue, size: 20),
+                                    child: const Icon(
+                                      Icons.calendar_today,
+                                      color: Colors.blue,
+                                      size: 20,
+                                    ),
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Obx(() {
-                                      final isToday = _selectedDate.value.day == DateTime.now().day &&
-                                                      _selectedDate.value.month == DateTime.now().month &&
-                                                      _selectedDate.value.year == DateTime.now().year;
+                                      final isToday =
+                                          _selectedDate.value.day ==
+                                              DateTime.now().day &&
+                                          _selectedDate.value.month ==
+                                              DateTime.now().month &&
+                                          _selectedDate.value.year ==
+                                              DateTime.now().year;
                                       return Text(
-                                        isToday ? 'Hari ini' : DateFormat('dd MMM yyyy').format(_selectedDate.value),
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark),
+                                        isToday
+                                            ? 'Hari ini'
+                                            : DateFormat(
+                                                'dd MMM yyyy',
+                                              ).format(_selectedDate.value),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: AppColors.textDark,
+                                        ),
                                       );
                                     }),
                                   ),
-                                  const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+                                  const Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: Colors.grey,
+                                  ),
                                 ],
                               ),
                             ],
@@ -421,38 +555,66 @@ class AddTransactionScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // --- Bagian Bawah: Tombol Tetap Terpisah ---
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20), // Padding bawah
+              padding: const EdgeInsets.fromLTRB(
+                24,
+                0,
+                24,
+                20,
+              ), // Padding bawah
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // === Teks Sudah Cocok? ===
                   Text(
-                    Get.arguments != null ? 'Simpan Perubahan?' : 'Sudah Cocok?',
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark, fontSize: 14),
+                    Get.arguments != null
+                        ? 'Simpan Perubahan?'
+                        : 'Sudah Cocok?',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 12),
 
                   // === Tombol Simpan ===
                   SizedBox(
                     width: double.infinity,
-                    child: Obx(() => ElevatedButton(
-                      onPressed: _isLoading.value ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFDCE775), // Lime Green
-                        foregroundColor: AppColors.textDark,
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                    child: Obx(
+                      () => ElevatedButton(
+                        onPressed: _isLoading.value ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(
+                            0xFFDCE775,
+                          ), // Lime Green
+                          foregroundColor: AppColors.textDark,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
+                        child: _isLoading.value
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.textDark,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Simpan',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
-                      child: _isLoading.value
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.textDark, strokeWidth: 2))
-                          : const Text('Simpan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    )),
+                    ),
                   ),
                 ],
               ),

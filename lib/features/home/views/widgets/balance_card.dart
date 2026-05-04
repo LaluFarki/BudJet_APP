@@ -10,74 +10,108 @@ import '../../../transaction/models/transaction_model.dart';
 class BalanceCard extends StatelessWidget {
   const BalanceCard({super.key});
 
-  void _showAddIncomeDialog(BuildContext context, TransactionController txCtrl) {
+  void _showAddIncomeDialog(
+    BuildContext context,
+    TransactionController txCtrl,
+  ) {
     final TextEditingController amountController = TextEditingController();
 
-    Get.defaultDialog(
-      title: 'Tambah Budget',
-      titleStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-      content: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Nominal ini akan ditambahkan ke budget bulanan Anda.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+    Get.dialog(
+      Obx(
+        () => AlertDialog(
+          title: const Text(
+            'Tambah Budget',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          content: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Nominal ini akan ditambahkan ke budget bulanan Anda.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Nominal',
+                    prefixText: 'Rp ',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                labelText: 'Nominal',
-                prefixText: 'Rp ',
-                border: OutlineInputBorder(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (!txCtrl.isAddingIncome.value) Get.back();
+              },
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDCE775),
+                foregroundColor: Colors.black,
               ),
+              onPressed: txCtrl.isAddingIncome.value
+                  ? null
+                  : () async {
+                      final cleanText = amountController.text.replaceAll(
+                        RegExp(r'[^0-9]'),
+                        '',
+                      );
+                      final inputAmount = double.tryParse(cleanText);
+                      if (inputAmount == null || inputAmount <= 0) {
+                        Get.snackbar(
+                          'Kesalahan',
+                          'Silakan masukkan angka valid',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
+                        return;
+                      }
+                      final uid = FirebaseAuth.instance.currentUser?.uid;
+                      if (uid == null) return;
+                      await txCtrl.addTransaction(
+                        TransactionModel(
+                          id: '',
+                          amount: inputAmount,
+                          createdAt: DateTime.now(),
+                          date: DateTime.now(),
+                          kategori: 'Top Up',
+                          note: 'Tambah Saldo dari Home',
+                          title: 'Tambah Saldo',
+                          type: 'income',
+                        ),
+                      );
+                      if (!txCtrl.isAddingIncome.value) {
+                        Get.back();
+                        Get.snackbar(
+                          'Berhasil',
+                          'Budget ditambahkan ${AppHelpers.formatCurrency(inputAmount)}',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
+                      }
+                    },
+              child: txCtrl.isAddingIncome.value
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Simpan'),
             ),
           ],
         ),
       ),
-      textConfirm: 'Simpan',
-      textCancel: 'Batal',
-      confirmTextColor: Colors.black,
-      buttonColor: const Color(0xFFDCE775),
-      cancelTextColor: Colors.grey,
-      onConfirm: () async {
-        final cleanText = amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
-        final inputAmount = double.tryParse(cleanText);
-
-        if (inputAmount == null || inputAmount <= 0) {
-          Get.snackbar('Kesalahan', 'Silakan masukkan angka valid', snackPosition: SnackPosition.BOTTOM);
-          return;
-        }
-
-        final uid = FirebaseAuth.instance.currentUser?.uid;
-        if (uid == null) return;
-
-        try {
-          // Tambahkan transaksi baru bertipe 'income' untuk mencatat di riwayat
-          await txCtrl.addTransaction(
-            TransactionModel(
-              id: '', // Diabaikan oleh Firestore addTransaction
-              amount: inputAmount,
-              createdAt: DateTime.now(),
-              date: DateTime.now(),
-              kategori: 'Top Up',
-              note: 'Tambah Saldo dari Home',
-              title: 'Tambah Saldo',
-              type: 'income',
-            ),
-          );
-
-          Get.back();
-          Get.snackbar('Berhasil', 'Budget ditambahkan ${AppHelpers.formatCurrency(inputAmount)}', snackPosition: SnackPosition.BOTTOM);
-        } catch (e) {
-          Get.snackbar('Gagal', 'Terjadi kesalahan: $e', snackPosition: SnackPosition.BOTTOM);
-        }
-      },
     );
   }
 
@@ -121,7 +155,10 @@ class BalanceCard extends StatelessWidget {
                       _showAddIncomeDialog(context, txCtrl);
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(20),
@@ -137,7 +174,14 @@ class BalanceCard extends StatelessWidget {
                         children: const [
                           Icon(Icons.add, size: 16, color: AppColors.textDark),
                           SizedBox(width: 4),
-                          Text('Tambah', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                          Text(
+                            'Tambah',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -176,7 +220,8 @@ class BalanceCard extends StatelessWidget {
                   GestureDetector(
                     onTap: () {
                       final txCtrl = Get.find<TransactionController>();
-                      txCtrl.isBalanceVisible.value = !txCtrl.isBalanceVisible.value;
+                      txCtrl.isBalanceVisible.value =
+                          !txCtrl.isBalanceVisible.value;
                     },
                     child: Container(
                       padding: const EdgeInsets.all(8),
@@ -187,8 +232,10 @@ class BalanceCard extends StatelessWidget {
                       child: Obx(() {
                         final txCtrl = Get.find<TransactionController>();
                         return Icon(
-                          txCtrl.isBalanceVisible.value ? Icons.visibility : Icons.visibility_off, 
-                          color: AppColors.textDark
+                          txCtrl.isBalanceVisible.value
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: AppColors.textDark,
                         );
                       }),
                     ),
