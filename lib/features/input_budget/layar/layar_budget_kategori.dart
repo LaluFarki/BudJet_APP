@@ -189,85 +189,53 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   @override
   Widget build(BuildContext context) {
     final sisa = _sisaBelumDialokasikan;
-    final isOver = sisa < 0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: const Color(0xFFF7F8FA),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 35),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
 
-              const Text(
-                'Budget Kategori',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              /// HEADER
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                  ),
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'Atur Budget',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 40),
+                ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
-              // 🔥 INDIKATOR SISA (FINAL)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: _isValid
-                      ? Colors.green.shade50
-                      : isOver
-                      ? Colors.red.shade50
-                      : Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: _isValid
-                        ? Colors.green.shade300
-                        : isOver
-                        ? Colors.red.shade300
-                        : Colors.orange.shade300,
+              /// SISA BUDGET
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Sisa Budget: ${_currencyFormat.format(sisa.toInt())}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _isValid
-                          ? '✅ Alokasi sudah pas!'
-                          : isOver
-                          ? '⚠️ Melebihi budget'
-                          : 'Sisa belum dialokasikan',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _isValid
-                            ? Colors.green.shade700
-                            : isOver
-                            ? Colors.red.shade700
-                            : Colors.orange.shade700,
-                      ),
-                    ),
-                    Text(
-                      _isValid
-                          ? 'Rp 0'
-                          : _currencyFormat.format(sisa.abs().toInt()),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: _isValid
-                            ? Colors.green.shade700
-                            : isOver
-                            ? Colors.red.shade700
-                            : Colors.orange.shade700,
-                      ),
-                    ),
-                  ],
-                ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 15),
 
               Expanded(
                 child: ListView.builder(
@@ -276,69 +244,67 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                     final kategori = widget.kategoriList[index];
 
                     return Container(
-                      margin: const EdgeInsets.only(bottom: 20),
+                      margin: const EdgeInsets.only(bottom: 18),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                          )
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
                         ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          /// HEADER ITEM
                           Row(
                             children: [
                               CircleAvatar(
+                                radius: 22,
                                 backgroundColor: _getColorBg(kategori),
                                 child: Icon(
                                   _getIcon(kategori),
                                   color: _getColor(kategori),
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               Text(
                                 kategori,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
-                              )
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 12),
 
-                          TextField(
-                            controller: controllers[index],
-                            keyboardType: TextInputType.number,
-                            onChanged: (value) =>
-                                _formatRupiah(controllers[index], value),
-                            decoration: InputDecoration(
-                              hintText: 'Budget Anda',
-                              filled: true,
-                              fillColor: const Color(0xFFF1F3F6),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
+                          const SizedBox(height: 14),
+
+                          const Text(
+                            'Periode Budget :',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
                             ),
                           ),
 
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
 
+                          /// TOGGLE
                           Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF1F3F6),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(30),
                             ),
                             child: Row(
                               children: ['Harian', 'Mingguan', 'Bulanan']
                                   .map((item) {
-                                final selected =
-                                    periodeList[index] == item;
+                                final selected = periodeList[index] == item;
 
                                 return Expanded(
                                   child: GestureDetector(
@@ -347,21 +313,24 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                                         periodeList[index] = item;
                                       });
                                     },
-                                    child: Container(
+                                    child: AnimatedContainer(
+                                      duration:
+                                      const Duration(milliseconds: 200),
                                       padding: const EdgeInsets.symmetric(
-                                          vertical: 10),
+                                          vertical: 8),
                                       decoration: BoxDecoration(
                                         color: selected
                                             ? const Color(0xFFD6E85A)
                                             : Colors.transparent,
                                         borderRadius:
-                                        BorderRadius.circular(16),
+                                        BorderRadius.circular(20),
                                       ),
                                       child: Center(
                                         child: Text(
                                           item,
                                           style: TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
                                             color: selected
                                                 ? Colors.black
                                                 : Colors.grey,
@@ -374,6 +343,27 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                               }).toList(),
                             ),
                           ),
+
+                          const SizedBox(height: 12),
+
+                          /// INPUT
+                          TextField(
+                            controller: controllers[index],
+                            keyboardType: TextInputType.number,
+                            onChanged: (value) =>
+                                _formatRupiah(controllers[index], value),
+                            decoration: InputDecoration(
+                              hintText: 'Budget Anda',
+                              filled: true,
+                              fillColor: const Color(0xFFF1F3F6),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -383,15 +373,14 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
 
               const SizedBox(height: 10),
 
-              const Center(
-                child: Text(
-                  'Sudah cocok?',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
+              const Text(
+                'Sudah cocok?',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
 
-              const SizedBox(height: 15),
+              const SizedBox(height: 12),
 
+              /// BUTTON
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -405,13 +394,16 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                     ),
                   ),
                   child: const Text(
-                    'Lanjut →',
-                    style: TextStyle(fontSize: 22),
+                    'Simpan',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
             ],
           ),
         ),
