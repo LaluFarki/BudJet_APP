@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../core/utils/app_helpers.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +9,22 @@ import '../../../core/constants/app_colors.dart';
 import '../controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 
+// Formatter untuk titik pemisah ribuan (contoh: 1000 → 1.000)
+class _ThousandsSeparatorFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll('.', '');
+    if (digits.isEmpty) return newValue.copyWith(text: '');
+    final formatted =
+        NumberFormat('#,###', 'id_ID').format(int.parse(digits));
+    return newValue.copyWith(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
 class AddTransactionScreen extends StatelessWidget {
   AddTransactionScreen({super.key}) {
     // Load kategori dari Firestore (budget user)
@@ -16,7 +33,10 @@ class AddTransactionScreen extends StatelessWidget {
     final TransactionModel? existingTx = Get.arguments as TransactionModel?;
     if (existingTx != null) {
       _titleController.text = existingTx.title;
-      _amountController.text = existingTx.amount.toInt().toString();
+      // Tampilkan angka dengan titik pemisah saat mode edit
+      final formatted = NumberFormat('#,###', 'id_ID')
+          .format(existingTx.amount.toInt());
+      _amountController.text = formatted;
       _selectedCategory.value = existingTx.kategori;
       _selectedDate.value = existingTx.date;
     }
@@ -100,6 +120,7 @@ class AddTransactionScreen extends StatelessWidget {
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
   final RxString _selectedCategory = ''.obs;
+  final RxDouble _enteredAmount = 0.0.obs; // Jumlah yg sedang diketik
 
   // Tanggal Picker
   final Rx<DateTime> _selectedDate = DateTime.now().obs;
@@ -169,20 +190,68 @@ class AddTransactionScreen extends StatelessWidget {
 
   void _submit() async {
     if (_formKey.currentState!.validate()) {
-      _isLoading.value = true;
       final TransactionModel? existingTx = Get.arguments as TransactionModel?;
+      final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      final amount = double.parse(cleanAmount.isEmpty ? '0' : cleanAmount);
 
-      // Hapus karakter non-digit agar parse uang aman
-      final cleanAmount = _amountController.text.replaceAll(
-        RegExp(r'[^0-9]'),
-        '',
-      );
+      // Cek saldo jika ini transaksi pengeluaran (bukan edit)
+      if (existingTx == null) {
+        final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
+        if (amount > sisaSaldo) {
+          Get.dialog(
+            AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFECEC),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.account_balance_wallet_outlined,
+                        color: Color(0xFFEC6A6A), size: 40),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Saldo Tidak Cukup',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sisa saldo kamu hanya ${AppHelpers.formatCurrency(sisaSaldo < 0 ? 0 : sisaSaldo)}, tidak cukup untuk transaksi ini.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.blueGrey, fontSize: 13),
+                  ),
+                ],
+              ),
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Get.back(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEC6A6A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Mengerti'),
+                  ),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+      }
+
+      _isLoading.value = true;
 
       final newTransaction = TransactionModel(
-        id:
-            existingTx?.id ??
-            '', // Diabaikan oleh Firestore create auto id jika kosong
-        amount: double.parse(cleanAmount.isEmpty ? '0' : cleanAmount),
+        id: existingTx?.id ?? '',
+        amount: amount,
         createdAt: existingTx?.createdAt ?? DateTime.now(),
         date: _selectedDate.value,
         kategori: _selectedCategory.value,
@@ -299,6 +368,12 @@ class AddTransactionScreen extends StatelessWidget {
                         child: TextFormField(
                           controller: _amountController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [_ThousandsSeparatorFormatter()],
+                          onChanged: (val) {
+                            final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
+                            _enteredAmount.value =
+                                double.tryParse(digits) ?? 0;
+                          },
                           decoration: const InputDecoration(
                             labelText: 'Nominal',
                             labelStyle: TextStyle(
@@ -323,18 +398,52 @@ class AddTransactionScreen extends StatelessWidget {
                             fontSize: 16,
                           ),
                           validator: (val) {
-                            if (val == null || val.isEmpty)
+                            if (val == null || val.isEmpty) {
                               return 'Isi nominal';
+                            }
                             final cleanVal = val.replaceAll(
                               RegExp(r'[^0-9]'),
                               '',
                             );
-                            if (double.tryParse(cleanVal) == null)
+                            if (double.tryParse(cleanVal) == null) {
                               return 'Angka tidak valid';
+                            }
                             return null;
                           },
                         ),
                       ),
+                      // Indikator sisa saldo real-time
+                      Obx(() {
+                        final existingTx = Get.arguments as TransactionModel?;
+                        if (existingTx != null) return const SizedBox.shrink();
+                        final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
+                        final setelahTransaksi = sisaSaldo - _enteredAmount.value;
+                        final cukup = setelahTransaksi >= 0;
+                        if (_enteredAmount.value <= 0) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 4),
+                          child: Row(
+                            children: [
+                              Icon(
+                                cukup ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+                                size: 14,
+                                color: cukup ? Colors.green : Colors.red,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                cukup
+                                    ? 'Sisa saldo: ${AppHelpers.formatCurrency(setelahTransaksi)}'
+                                    : 'Saldo tidak cukup! Kurang ${AppHelpers.formatCurrency(-setelahTransaksi)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: cukup ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                       const SizedBox(height: 16),
 
                       // === Kategori Dropdown ===

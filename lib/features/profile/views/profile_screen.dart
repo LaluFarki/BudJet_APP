@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/app_colors.dart';
 import '../controllers/profile_controller.dart';
+import '../../auth/controllers/auth_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -93,7 +94,29 @@ class ProfileScreen extends StatelessWidget {
               ),
             );
           }),
-          const SizedBox(height: 40),
+          const SizedBox(height: 6),
+          // Email user (info saja)
+          Builder(
+            builder: (_) {
+              final email = FirebaseAuth.instance.currentUser?.email ?? '';
+              if (email.isEmpty) return const SizedBox.shrink();
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.email_outlined, size: 13, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    email,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 32),
           // Menu List
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -116,6 +139,16 @@ class ProfileScreen extends StatelessWidget {
                   iconBgColor: const Color(0xFFE3EFFF),
                   onTap: () {
                     Get.toNamed('/data-diri');
+                  },
+                ),
+                const SizedBox(height: 16),
+                _buildMenuCard(
+                  title: 'Pengaturan',
+                  icon: Icons.settings_outlined,
+                  iconColor: const Color(0xFF9C6FDE),
+                  iconBgColor: const Color(0xFFF3EEFF),
+                  onTap: () {
+                    Get.toNamed('/settings');
                   },
                 ),
                 const SizedBox(height: 16),
@@ -161,12 +194,11 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Karena kami sedang dalam tahap pengembangan awal, jika anda log out maka akun anda akan hilang.',
+                'Apakah kamu yakin ingin keluar dari BudJet?\nKamu bisa masuk kembali kapan saja dengan email atau akun Google-mu.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFFEC6A6A),
-                  fontWeight: FontWeight.w600,
+                  color: Colors.blueGrey,
                   height: 1.5,
                 ),
               ),
@@ -187,14 +219,10 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.clear();
-                        await prefs.setBool('isOnboardingDone', false);
-                        await FirebaseAuth.instance.signOut();
-                        
-                        Get.deleteAll(force: true);
-                        Get.offAllNamed('/awal');
+                      onPressed: () {
+                        Get.back(); // Tutup dialog
+                        final authCtrl = Get.find<AuthController>();
+                        authCtrl.logout();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFEC6A6A),

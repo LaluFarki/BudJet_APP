@@ -11,6 +11,10 @@ import '../features/transaction/views/today_transactions_screen.dart';
 import '../features/budget/views/budget_screen.dart';
 import '../features/budget/views/edit_budget_screen.dart';
 import '../features/profile/views/data_diri_screen.dart';
+import '../features/auth/views/login_screen.dart';
+import '../features/auth/views/register_screen.dart';
+import '../features/auth/views/forgot_password_screen.dart';
+import '../features/settings/views/settings_screen.dart';
 
 class AppRoutes {
   // Default route
@@ -18,6 +22,11 @@ class AppRoutes {
 
   // Awal
   static const String awal = '/awal';
+
+  // Auth
+  static const String login = '/login';
+  static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
 
   // Route lain
   static const String history = '/history';
@@ -28,9 +37,14 @@ class AppRoutes {
   static const String todayTx = '/today-tx';
   static const String addTx = '/add-tx';
   static const String successTx = '/success-tx';
+  static const String settings = '/settings';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
+      login: (context) => const LoginScreen(),
+      register: (context) => const RegisterScreen(),
+      forgotPassword: (context) => const ForgotPasswordScreen(),
+      
       awal: (context) => LayarAwal(),
 
       home: (context) => const MainScreen(),
@@ -50,6 +64,8 @@ class AppRoutes {
       addTx: (context) => AddTransactionScreen(),
 
       successTx: (context) => const SuccessTransactionScreen(),
+
+      settings: (context) => const SettingsScreen(),
     };
   }
 }

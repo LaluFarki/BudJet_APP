@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/app_colors.dart';
 import '../controllers/profile_controller.dart';
 
@@ -247,11 +248,35 @@ class DataDiriScreen extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
       ),
-      body: Obx(() {
-        return SingleChildScrollView(
+      body: Builder(builder: (context) {
+        final user = FirebaseAuth.instance.currentUser;
+        final email = user?.email ?? '-';
+        final joinDate = user?.metadata.creationTime;
+        String joinStr = '-';
+        if (joinDate != null) {
+          joinStr = '${joinDate.day.toString().padLeft(2, '0')} '
+              '${_monthName(joinDate.month)} '
+              '${joinDate.year}';
+        }
+
+        return Obx(() => SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // === Info Akun (read-only) ===
+              _buildSectionLabel('Info Akun'),
+              _buildInfoCard(label: 'Email', value: email, icon: Icons.email_outlined),
+              const SizedBox(height: 12),
+              _buildInfoCard(
+                label: 'Bergabung Sejak',
+                value: joinStr,
+                icon: Icons.calendar_today_outlined,
+              ),
+              const SizedBox(height: 24),
+
+              // === Data yang Bisa Diedit ===
+              _buildSectionLabel('Data Pribadi'),
               _buildDataCard(
                 label: 'Nama',
                 value: profileCtrl.name.value,
@@ -264,8 +289,84 @@ class DataDiriScreen extends StatelessWidget {
               ),
             ],
           ),
-        );
+        ));
       }),
+    );
+  }
+
+  String _monthName(int month) {
+    const months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return months[month - 1];
+  }
+
+  Widget _buildSectionLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10, left: 4),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: Colors.grey, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFF949BA5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: AppColors.textDark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.lock_outline, color: Colors.grey, size: 16),
+        ],
+      ),
     );
   }
 
