@@ -9,20 +9,15 @@ import '../../../core/constants/app_colors.dart';
 import '../controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 
-// Formatter untuk titik pemisah ribuan (contoh: 1000 → 1.000)
 class _ThousandsSeparatorFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    // Hanya ambil angka
-    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll('.', '');
     if (digits.isEmpty) return newValue.copyWith(text: '');
-    
-    final parsed = int.tryParse(digits);
-    if (parsed == null) return newValue.copyWith(text: '');
-
-    final formatted =
-        NumberFormat('#,###', 'id_ID').format(parsed);
+    final formatted = NumberFormat('#,###', 'id_ID').format(int.parse(digits));
     return newValue.copyWith(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
@@ -135,20 +130,17 @@ class AddTransactionScreen extends StatelessWidget {
 
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
+
   final RxString _selectedCategory = ''.obs;
-  final RxDouble _enteredAmount = 0.0.obs; // Jumlah yg sedang diketik
-  // Budget harian per kategori {namaKategori: budgetHarian}
-  final RxMap<String, double> _categoryDailyBudget = <String, double>{}.obs;
-
-  // Tanggal Picker
+  final RxDouble _enteredAmount = 0.0.obs;
   final Rx<DateTime> _selectedDate = DateTime.now().obs;
-
   final RxBool _isLoading = false.obs;
 
-  // Kategori dinamis dari Firestore (budget user)
   final RxList<String> _categories = <String>[].obs;
 
-  // Fallback jika belum ada data di Firestore
+  final RxMap<String, Map<String, dynamic>> _categoryBudgetData =
+      <String, Map<String, dynamic>>{}.obs;
+
   static const _defaultCategories = [
     'Makanan & Minuman',
     'Transportasi',
@@ -157,8 +149,73 @@ class AddTransactionScreen extends StatelessWidget {
     'Lainnya',
   ];
 
-  void _loadCategories() async {
+  String _periodLabel(String periode) {
+    switch (periode) {
+      case 'daily':
+        return 'harian';
+      case 'weekly':
+        return 'mingguan';
+      case 'monthly':
+      default:
+        return 'bulanan';
+    }
+  }
+
+  bool _isSameCategory(String txCategory, String selectedCategory) {
+    final txLower = txCategory.toLowerCase();
+    final selectedLower = selectedCategory.toLowerCase();
+
+    if (txLower == selectedLower) return true;
+
+    final keywords = selectedLower.split(RegExp(r'[\s&]+'));
+    for (final keyword in keywords) {
+      if (keyword.length >= 3 && txLower.contains(keyword)) return true;
+    }
+
+    return false;
+  }
+
+  DateTime _startOfWeek(DateTime date) {
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+    ).subtract(Duration(days: date.weekday - 1));
+  }
+
+  double _usedByCategoryAndPeriod({
+    required String category,
+    required String period,
+    required DateTime selectedDate,
+  }) {
+    return txController.transactions
+        .where((tx) {
+          if (tx.type != 'expense') return false;
+          if (!_isSameCategory(tx.kategori, category)) return false;
+
+          if (period == 'daily') {
+            return tx.date.year == selectedDate.year &&
+                tx.date.month == selectedDate.month &&
+                tx.date.day == selectedDate.day;
+          }
+
+          if (period == 'weekly') {
+            final start = _startOfWeek(selectedDate);
+            final end = start.add(const Duration(days: 7));
+
+            return tx.date.isAtSameMomentAs(start) ||
+                (tx.date.isAfter(start) && tx.date.isBefore(end));
+          }
+
+          return tx.date.year == selectedDate.year &&
+              tx.date.month == selectedDate.month;
+        })
+        .fold(0.0, (sum, tx) => sum + tx.amount);
+  }
+
+  Future<void> _loadCategories() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+
     if (uid == null) {
       _categories.value = _defaultCategories.toList();
       if (_selectedCategory.value.isEmpty) {
@@ -171,32 +228,44 @@ class AddTransactionScreen extends StatelessWidget {
         .collection('users')
         .doc(uid)
         .get();
+
     if (doc.exists) {
       final data = doc.data() ?? {};
       final categoriesRaw = data['categories'] as List<dynamic>? ?? [];
+
       if (categoriesRaw.isNotEmpty) {
-        _categories.value = categoriesRaw
-            .map((e) => (e as Map<String, dynamic>)['nama'] as String? ?? '')
-            .where((n) => n.isNotEmpty)
-            .toList();
-        // Ambil budget harian per kategori
-        final Map<String, double> dailyMap = {};
-        for (final e in categoriesRaw) {
-          final map = e as Map<String, dynamic>;
+        final loadedCategories = <String>[];
+        final budgetMap = <String, Map<String, dynamic>>{};
+
+        for (final item in categoriesRaw) {
+          final map = item as Map<String, dynamic>;
           final nama = map['nama'] as String? ?? '';
-          final harian = (map['harian'] ?? 0).toDouble();
-          if (nama.isNotEmpty) dailyMap[nama] = harian;
+
+          if (nama.isEmpty) continue;
+
+          final periode = map['periode'] as String? ?? 'monthly';
+          final alokasiBulanan = (map['alokasiBulanan'] ?? map['alokasi'] ?? 0)
+              .toDouble();
+          final alokasiInput = (map['alokasiInput'] ?? alokasiBulanan)
+              .toDouble();
+
+          loadedCategories.add(nama);
+          budgetMap[nama] = {
+            'periode': periode,
+            'alokasiInput': alokasiInput,
+            'alokasiBulanan': alokasiBulanan,
+          };
         }
-        _categoryDailyBudget.value = dailyMap;
+
+        _categories.value = loadedCategories;
+        _categoryBudgetData.value = budgetMap;
       }
     }
 
-    // Fallback jika kosong
     if (_categories.isEmpty) {
       _categories.value = _defaultCategories.toList();
     }
 
-    // Set default selected jika belum di-set (bukan mode edit)
     if (_selectedCategory.value.isEmpty ||
         !_categories.contains(_selectedCategory.value)) {
       _selectedCategory.value = _categories.first;
@@ -208,8 +277,9 @@ class AddTransactionScreen extends StatelessWidget {
       context: context,
       initialDate: _selectedDate.value,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now(), // Batasi maksimal hari ini
+      lastDate: DateTime.now(),
     );
+
     if (picked != null && picked != _selectedDate.value) {
       _selectedDate.value = picked;
     }
@@ -365,18 +435,18 @@ class AddTransactionScreen extends StatelessWidget {
         }
       }
 
-      _isLoading.value = true;
+    _isLoading.value = true;
 
-      final newTransaction = TransactionModel(
-        id: existingTx?.id ?? '',
-        amount: amount,
-        createdAt: existingTx?.createdAt ?? DateTime.now(),
-        date: _selectedDate.value,
-        kategori: _selectedCategory.value,
-        note: '', // Desain baru tidak ada note
-        title: _titleController.text,
-        type: existingTx?.type ?? 'expense', // Pertahankan tipe asli
-      );
+    final newTransaction = TransactionModel(
+      id: existingTx?.id ?? '',
+      amount: amount,
+      createdAt: existingTx?.createdAt ?? DateTime.now(),
+      date: _selectedDate.value,
+      kategori: _selectedCategory.value,
+      note: '',
+      title: _titleController.text,
+      type: existingTx?.type ?? 'expense',
+    );
 
       if (existingTx != null) {
         await txController.updateTransaction(existingTx!, newTransaction);
@@ -384,20 +454,19 @@ class AddTransactionScreen extends StatelessWidget {
         await txController.addTransaction(newTransaction);
       }
 
-      _isLoading.value = false;
-      if (existingTx != null) {
-        _showSuccessDialog('Transaksi Berhasil Diperbarui');
-      } else {
-        // Pindah ke Success Screen kirim data
-        Get.offNamed('/success-tx', arguments: newTransaction);
-      }
+    _isLoading.value = false;
+
+    if (existingTx != null) {
+      _showSuccessDialog('Transaksi Berhasil Diperbarui');
+    } else {
+      Get.offNamed('/success-tx', arguments: newTransaction);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA), // Sangat light grey / off-white
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -419,7 +488,6 @@ class AddTransactionScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- Bagian Atas: Form bisa di-scroll ---
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -432,7 +500,6 @@ class AddTransactionScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // === Nama Pengeluaran ===
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -468,9 +535,9 @@ class AddTransactionScreen extends StatelessWidget {
                               val == null || val.isEmpty ? 'Isi judul' : null,
                         ),
                       ),
+
                       const SizedBox(height: 16),
 
-                      // === Nominal ===
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -491,19 +558,31 @@ class AddTransactionScreen extends StatelessWidget {
                             _ThousandsSeparatorFormatter(),
                           ],
                           onChanged: (val) {
-                            final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
+                            final digits = val.replaceAll(
+                              RegExp(r'[^0-9]'),
+                              '',
+                            );
                             double parsed = double.tryParse(digits) ?? 0;
-                            // Batasi input agar tidak melebihi sisa saldo
-                            final sisaSaldo = txController.budgetBulanan.value -
+
+                            final sisaSaldo =
+                                txController.budgetBulanan.value -
                                 txController.totalExpense;
+
                             if (sisaSaldo > 0 && parsed > sisaSaldo) {
                               parsed = sisaSaldo.floorToDouble();
-                              final capped = NumberFormat('#,###', 'id_ID')
-                                  .format(parsed.toInt());
+
+                              final capped = NumberFormat(
+                                '#,###',
+                                'id_ID',
+                              ).format(parsed.toInt());
+
                               _amountController.text = capped;
                               _amountController.selection =
-                                  TextSelection.collapsed(offset: capped.length);
+                                  TextSelection.collapsed(
+                                    offset: capped.length,
+                                  );
                             }
+
                             _enteredAmount.value = parsed;
                           },
                           decoration: const InputDecoration(
@@ -533,16 +612,15 @@ class AddTransactionScreen extends StatelessWidget {
                             if (val == null || val.isEmpty) {
                               return 'Isi nominal';
                             }
-                            if (val.contains(RegExp(r'[^0-9.]'))) {
-                              return 'Hanya menerima input angka';
-                            }
                             final cleanVal = val.replaceAll(
                               RegExp(r'[^0-9]'),
                               '',
                             );
+
                             if (double.tryParse(cleanVal) == null) {
                               return 'Angka tidak valid';
                             }
+
                             return null;
                           },
                         ),
@@ -560,7 +638,9 @@ class AddTransactionScreen extends StatelessWidget {
                           child: Row(
                             children: [
                               Icon(
-                                cukup ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+                                cukup
+                                    ? Icons.check_circle_outline
+                                    : Icons.warning_amber_rounded,
                                 size: 14,
                                 color: cukup ? Colors.green : Colors.red,
                               ),
@@ -579,9 +659,9 @@ class AddTransactionScreen extends StatelessWidget {
                           ),
                         );
                       }),
+
                       const SizedBox(height: 16),
 
-                      // === Kategori Dropdown ===
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -642,13 +722,15 @@ class AddTransactionScreen extends StatelessWidget {
                                         style: TextStyle(color: Colors.grey),
                                       );
                                     }
-                                    // Jika kategori lama (dari edit) tidak ada di list, tambahkan sementara
+
                                     final items = _categories.toList();
+
                                     if (!items.contains(
                                       _selectedCategory.value,
                                     )) {
                                       items.add(_selectedCategory.value);
                                     }
+
                                     return DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
                                         value: _selectedCategory.value,
@@ -683,6 +765,9 @@ class AddTransactionScreen extends StatelessWidget {
                                         ],
                                         onChanged: (val) {
                                           if (val == '__ADD_NEW__') {
+                                            final previousCategory =
+                                                _selectedCategory.value;
+
                                             Get.defaultDialog(
                                               title: 'Kategori Tidak Ada?',
                                               middleText:
@@ -696,10 +781,24 @@ class AddTransactionScreen extends StatelessWidget {
                                               cancelTextColor:
                                                   AppColors.textDark,
                                               onConfirm: () {
-                                                Get.back(); // Tutup dialog
+                                                Get.back();
+
+                                                _selectedCategory.value =
+                                                    previousCategory;
+
                                                 Get.toNamed(
                                                   '/edit-budget',
-                                                ); // Pindah ke halaman edit budget
+                                                )?.then((_) async {
+                                                  await _loadCategories();
+
+                                                  if (_categories.isNotEmpty &&
+                                                      !_categories.contains(
+                                                        _selectedCategory.value,
+                                                      )) {
+                                                    _selectedCategory.value =
+                                                        _categories.last;
+                                                  }
+                                                });
                                               },
                                             );
                                           } else if (val != null) {
@@ -715,9 +814,9 @@ class AddTransactionScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+
                       const SizedBox(height: 16),
 
-                      // === Tanggal ===
                       GestureDetector(
                         onTap: () => _selectDate(context),
                         child: Container(
@@ -769,6 +868,7 @@ class AddTransactionScreen extends StatelessWidget {
                                               DateTime.now().month &&
                                           _selectedDate.value.year ==
                                               DateTime.now().year;
+
                                       return Text(
                                         isToday
                                             ? 'Hari ini'
@@ -793,25 +893,19 @@ class AddTransactionScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 40), // Ruang lega ekstra
+
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
               ),
             ),
 
-            // --- Bagian Bawah: Tombol Tetap Terpisah ---
             Container(
-              padding: const EdgeInsets.fromLTRB(
-                24,
-                0,
-                24,
-                20,
-              ), // Padding bawah
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // === Teks Sudah Cocok? ===
                   Text(
                     existingTx != null
                         ? 'Simpan Perubahan?'
@@ -823,17 +917,13 @@ class AddTransactionScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // === Tombol Simpan ===
                   SizedBox(
                     width: double.infinity,
                     child: Obx(
                       () => ElevatedButton(
                         onPressed: _isLoading.value ? null : _submit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(
-                            0xFFDCE775,
-                          ), // Lime Green
+                          backgroundColor: const Color(0xFFDCE775),
                           foregroundColor: AppColors.textDark,
                           padding: const EdgeInsets.symmetric(vertical: 20),
                           shape: RoundedRectangleBorder(

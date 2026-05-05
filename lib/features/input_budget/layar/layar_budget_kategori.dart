@@ -206,6 +206,28 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     );
   }
 
+  String _getPreviewBulanan(double nominal, String periode) {
+    int multiplier = 1;
+
+    switch (periode) {
+      case 'Harian':
+        multiplier = 30;
+        break;
+      case 'Mingguan':
+        multiplier = 4;
+        break;
+      case 'Bulanan':
+        multiplier = 1;
+        break;
+    }
+
+    final total = nominal * multiplier;
+
+    if (nominal == 0) return '';
+
+    return 'Alokasi 1 bulan = ${_currencyFormat.format(nominal.toInt())} × $multiplier = ${_currencyFormat.format(total.toInt())}';
+  }
+
   void _showValidationPopup() {
     final sisa = _sisaBelumDialokasikan;
     final isOver = sisa < 0;
@@ -402,7 +424,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                               hintText:
                                   'Nominal per ${periodeList[index].toLowerCase()}',
                               helperText:
-                                  'Masukkan jatah ${kategori.toLowerCase()} untuk 1 ${periodeList[index].toLowerCase()}',
+                                  'Jatah ${kategori.toLowerCase()} per ${periodeList[index].toLowerCase()}',
                               helperStyle: const TextStyle(fontSize: 12),
                               filled: true,
                               fillColor: const Color(0xFFF1F3F6),
@@ -411,6 +433,33 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                                 borderSide: BorderSide.none,
                               ),
                             ),
+                          ),
+
+                          // 👇 TAMBAHKAN DI SINI
+                          Builder(
+                            builder: (_) {
+                              final nominal = _parseRupiah(
+                                controllers[index].text,
+                              );
+                              final preview = _getPreviewBulanan(
+                                nominal,
+                                periodeList[index],
+                              );
+
+                              if (preview.isEmpty) return const SizedBox();
+
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  preview,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
 
                           const SizedBox(height: 12),
@@ -432,7 +481,6 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                                     onTap: () {
                                       setState(() {
                                         periodeList[index] = item;
-                                        controllers[index].clear();
                                       });
                                     },
                                     child: Container(
