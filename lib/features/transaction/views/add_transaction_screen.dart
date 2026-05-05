@@ -537,13 +537,12 @@ class AddTransactionScreen extends StatelessWidget {
                         ),
                       ),
                       // Indikator sisa saldo real-time
-                      Obx(() {
-                        final existingTx = Get.arguments as TransactionModel?;
-                        if (existingTx != null) return const SizedBox.shrink();
-                        final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
-                        final setelahTransaksi = sisaSaldo - _enteredAmount.value;
-                        final cukup = setelahTransaksi >= 0;
-                        if (_enteredAmount.value <= 0) return const SizedBox.shrink();
+                      if (Get.arguments == null)
+                        Obx(() {
+                          final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
+                          final setelahTransaksi = sisaSaldo - _enteredAmount.value;
+                          final cukup = setelahTransaksi >= 0;
+                          if (_enteredAmount.value <= 0) return const SizedBox.shrink();
                         return Padding(
                           padding: const EdgeInsets.only(top: 8, left: 4),
                           child: Row(
