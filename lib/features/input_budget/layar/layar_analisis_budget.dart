@@ -106,7 +106,7 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
         'bulan': widget.bulan.toIso8601String(),
         'categories': categories,
         'selectedCategories': widget.categories.map((c) => c.name).toList(),
-        'allocations': {for (final c in widget.categories) c.name: c.allocationAmount},
+        'allocations': {for (final c in widget.categories) c.name: c.amount},
         'balance': widget.budgetBulanan, // ← Saldo awal = total budget bulanan
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
