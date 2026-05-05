@@ -37,7 +37,10 @@ class CategoryListWidget extends StatelessWidget {
     );
 
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(height: 100);
@@ -51,11 +54,12 @@ class CategoryListWidget extends StatelessWidget {
         if (categoriesRaw.isEmpty) return const SizedBox();
 
         // Parse & sort berdasarkan alokasi terbesar
-        final categories = categoriesRaw
-            .map((e) => e as Map<String, dynamic>)
-            .toList()
-          ..sort((a, b) =>
-              ((b['alokasi'] ?? 0) as num).compareTo((a['alokasi'] ?? 0) as num));
+        final categories =
+            categoriesRaw.map((e) => e as Map<String, dynamic>).toList()..sort(
+              (a, b) => ((b['alokasi'] ?? 0) as num).compareTo(
+                (a['alokasi'] ?? 0) as num,
+              ),
+            );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,7 +89,10 @@ class CategoryListWidget extends StatelessWidget {
                 GestureDetector(
                   onTap: () => Get.toNamed('/budget'),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE8F5E9),
                       borderRadius: BorderRadius.circular(12),
@@ -124,8 +131,10 @@ class CategoryListWidget extends StatelessWidget {
                         ),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: const Color(0xFF4CAF50), // Hijau lebih segar & lembut
-                          width: 2.0, 
+                          color: const Color(
+                            0xFF4CAF50,
+                          ), // Hijau lebih segar & lembut
+                          width: 2.0,
                         ),
                         boxShadow: [
                           // Aksen hitam sangat tipis
@@ -136,7 +145,9 @@ class CategoryListWidget extends StatelessWidget {
                           ),
                           // Glow hijau yang lebih halus
                           BoxShadow(
-                            color: const Color(0xFF4CAF50).withValues(alpha: 0.15),
+                            color: const Color(
+                              0xFF4CAF50,
+                            ).withValues(alpha: 0.15),
                             blurRadius: 12,
                             spreadRadius: 1,
                             offset: const Offset(0, 6),
@@ -152,7 +163,11 @@ class CategoryListWidget extends StatelessWidget {
                               color: Color(0xFFE4F8E4),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.payments, color: Color(0xFF58A83A), size: 26),
+                            child: const Icon(
+                              Icons.payments,
+                              color: Color(0xFF58A83A),
+                              size: 26,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           const Text(
@@ -227,7 +242,11 @@ class CategoryListWidget extends StatelessWidget {
                                     color: catBg,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(catIcon, color: catColor, size: 22),
+                                  child: Icon(
+                                    catIcon,
+                                    color: catColor,
+                                    size: 22,
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
@@ -268,8 +287,13 @@ class CategoryListWidget extends StatelessWidget {
   }) {
     final txCtrl = Get.find<TransactionController>();
     final nama = cat['nama'] as String? ?? '';
-    final alokasi = (cat['alokasi'] ?? 0).toDouble();
-    final harian = (cat['harian'] ?? (alokasi / 30)).toDouble();
+    final alokasiBulanan = (cat['alokasiBulanan'] ?? cat['alokasi'] ?? 0)
+        .toDouble();
+
+    final alokasiInput = (cat['alokasiInput'] ?? alokasiBulanan).toDouble();
+
+    final periode = cat['periode'] as String? ?? 'monthly';
+
     final now = DateTime.now();
 
     // Helper: cek apakah kategori transaksi cocok dengan nama budget
@@ -289,27 +313,60 @@ class CategoryListWidget extends StatelessWidget {
 
     // Expense bulan ini untuk kategori ini
     final usedBulan = txCtrl.transactions
-        .where((tx) =>
-            tx.type == 'expense' &&
-            matchKategori(tx.kategori) &&
-            tx.date.year == now.year &&
-            tx.date.month == now.month)
+        .where(
+          (tx) =>
+              tx.type == 'expense' &&
+              matchKategori(tx.kategori) &&
+              tx.date.year == now.year &&
+              tx.date.month == now.month,
+        )
         .fold(0.0, (total, item) => total + item.amount);
 
     final usedHari = txCtrl.transactions
-        .where((tx) =>
-            tx.type == 'expense' &&
-            matchKategori(tx.kategori) &&
-            tx.date.year == now.year &&
-            tx.date.month == now.month &&
-            tx.date.day == now.day)
+        .where(
+          (tx) =>
+              tx.type == 'expense' &&
+              matchKategori(tx.kategori) &&
+              tx.date.year == now.year &&
+              tx.date.month == now.month &&
+              tx.date.day == now.day,
+        )
         .fold(0.0, (total, item) => total + item.amount);
 
-    final sisaBulan = alokasi - usedBulan;
-    final sisaHari = harian - usedHari;
-    
+    final usedPeriode = txCtrl.transactions
+        .where((tx) {
+          final isSameCategory =
+              tx.type == 'expense' && matchKategori(tx.kategori);
+
+          if (!isSameCategory) return false;
+
+          if (periode == 'daily') {
+            return tx.date.year == now.year &&
+                tx.date.month == now.month &&
+                tx.date.day == now.day;
+          }
+
+          if (periode == 'weekly') {
+            final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+            final endOfWeek = startOfWeek.add(const Duration(days: 7));
+
+            return tx.date.isAfter(
+                  startOfWeek.subtract(const Duration(seconds: 1)),
+                ) &&
+                tx.date.isBefore(endOfWeek);
+          }
+
+          return tx.date.year == now.year && tx.date.month == now.month;
+        })
+        .fold(0.0, (total, item) => total + item.amount);
+
+    final sisaBulan = alokasiBulanan - usedBulan;
+    final sisaPeriode = alokasiInput - usedPeriode;
+
     // Temukan index asli untuk konsistensi warna (opsional, tapi lebih baik pakai keyword match)
-    final catIndex = txCtrl.transactions.indexWhere((tx) => matchKategori(tx.kategori));
+    final catIndex = txCtrl.transactions.indexWhere(
+      (tx) => matchKategori(tx.kategori),
+    );
     final catColor = _getColor(nama, catIndex != -1 ? catIndex : 0);
     final catIcon = _getIcon(nama);
 
@@ -339,11 +396,8 @@ class CategoryListWidget extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Alokasi: ${currencyFmt.format(alokasi)}',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                ),
+                'Alokasi: ${currencyFmt.format(alokasiInput)} / ${periodeLabel(periode).replaceAll(' Ini', '').toLowerCase()}',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 20),
 
@@ -351,16 +405,20 @@ class CategoryListWidget extends StatelessWidget {
               _infoRow(
                 label: 'Sisa Bulan Ini',
                 value: currencyFmt.format(sisaBulan < 0 ? 0 : sisaBulan),
-                valueColor: sisaBulan < 0 ? Colors.red : const Color(0xFF4CAF50),
-              ),
-              const SizedBox(height: 10),
-              // Sisa Hari Ini
-              _infoRow(
-                label: 'Sisa Hari Ini',
-                value: currencyFmt.format(sisaHari < 0 ? 0 : sisaHari),
-                valueColor: sisaHari < 0 ? Colors.red : const Color(0xFF2196F3),
+                valueColor: sisaBulan < 0
+                    ? Colors.red
+                    : const Color(0xFF4CAF50),
               ),
 
+              const SizedBox(height: 10),
+
+              _infoRow(
+                label: 'Sisa ${periodeLabel(periode)}',
+                value: currencyFmt.format(sisaPeriode < 0 ? 0 : sisaPeriode),
+                valueColor: sisaPeriode < 0
+                    ? Colors.red
+                    : const Color(0xFF2196F3),
+              ),
               const SizedBox(height: 24),
 
               // Tombol Edit Budget
@@ -391,6 +449,18 @@ class CategoryListWidget extends StatelessWidget {
     );
   }
 
+  String periodeLabel(String p) {
+    switch (p) {
+      case 'daily':
+        return 'Hari Ini';
+      case 'weekly':
+        return 'Minggu Ini';
+      case 'monthly':
+      default:
+        return 'Bulan Ini';
+    }
+  }
+
   Widget _infoRow({
     required String label,
     required String value,
@@ -407,10 +477,7 @@ class CategoryListWidget extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade700,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
           ),
           Text(
             value,

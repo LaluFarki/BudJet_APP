@@ -93,7 +93,8 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
           'terpakai': c.spentAmount,
           'sisa': c.remainingAmount,
           'persentase': widget.budgetBulanan > 0
-              ? (c.monthlyEquivalent / widget.budgetBulanan * 100).roundToDouble()
+              ? (c.monthlyEquivalent / widget.budgetBulanan * 100)
+                    .roundToDouble()
               : 0.0,
           'harian': (c.monthlyEquivalent / 30).roundToDouble(),
         };
@@ -250,8 +251,7 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
                               icon: _iconForKategori(category.name),
                               iconBg: _iconBgFor(category.name, e.key),
                               iconColor: _colorForIndex(category.name, e.key),
-                              title:
-                                  '${category.name} (${category.period.label})',
+                              title: '${category.name}',
                               amount: _currencyFormat.format(
                                 category.monthlyEquivalent,
                               ),
