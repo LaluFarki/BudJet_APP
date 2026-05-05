@@ -141,6 +141,8 @@ class AddTransactionScreen extends StatelessWidget {
   final RxMap<String, Map<String, dynamic>> _categoryBudgetData =
       <String, Map<String, dynamic>>{}.obs;
 
+  final RxMap<String, double> _categoryDailyBudget = <String, double>{}.obs;
+
   static const _defaultCategories = [
     'Makanan & Minuman',
     'Transportasi',
@@ -236,6 +238,7 @@ class AddTransactionScreen extends StatelessWidget {
       if (categoriesRaw.isNotEmpty) {
         final loadedCategories = <String>[];
         final budgetMap = <String, Map<String, dynamic>>{};
+        final dailyBudgetMap = <String, double>{};
 
         for (final item in categoriesRaw) {
           final map = item as Map<String, dynamic>;
@@ -255,10 +258,19 @@ class AddTransactionScreen extends StatelessWidget {
             'alokasiInput': alokasiInput,
             'alokasiBulanan': alokasiBulanan,
           };
+
+          if (periode == 'daily') {
+            dailyBudgetMap[nama] = alokasiInput;
+          } else if (periode == 'weekly') {
+            dailyBudgetMap[nama] = alokasiInput / 7;
+          } else {
+            dailyBudgetMap[nama] = alokasiInput / 30;
+          }
         }
 
         _categories.value = loadedCategories;
         _categoryBudgetData.value = budgetMap;
+        _categoryDailyBudget.value = dailyBudgetMap;
       }
     }
 
@@ -461,6 +473,7 @@ class AddTransactionScreen extends StatelessWidget {
     } else {
       Get.offNamed('/success-tx', arguments: newTransaction);
     }
+  }
   }
 
   @override
