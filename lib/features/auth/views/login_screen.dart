@@ -57,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Masuk untuk mengelola keuangan Anda bersama teman.',
+                      'Masuk untuk mengelola keuangan.',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 14,

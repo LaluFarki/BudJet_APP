@@ -257,75 +257,95 @@ class AddTransactionScreen extends StatelessWidget {
           return;
         }
 
-        // Cek budget harian kategori
+        // Cek budget harian kategori (kumulatif: total hari ini + transaksi baru)
         final dailyBudget = _categoryDailyBudget[_selectedCategory.value] ?? 0;
-        if (dailyBudget > 0 && amount > dailyBudget) {
-          // Tanya konfirmasi sebelum lanjut
-          final confirmed = await Get.dialog<bool>(
-            AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFF3CD),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.calendar_today_outlined,
-                        color: Color(0xFFF59E0B), size: 38),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Melewati Budget Harian',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) '
-                    'melebihi budget harian kategori "${_selectedCategory.value}" '
-                    'kamu sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
-                    'Melanjutkan transaksi ini dapat mengganggu rencana keuangan harianmu.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.blueGrey, fontSize: 13, height: 1.5),
-                  ),
-                ],
-              ),
-              actions: [
-                Row(
+        if (dailyBudget > 0) {
+          final today = DateTime.now();
+          // Hitung total pengeluaran hari ini untuk kategori yang dipilih
+          final todaySpent = txController.transactions
+              .where((t) =>
+                  t.type == 'expense' &&
+                  t.kategori == _selectedCategory.value &&
+                  t.date.year == today.year &&
+                  t.date.month == today.month &&
+                  t.date.day == today.day)
+              .fold(0.0, (sum, t) => sum + t.amount);
+
+          final totalSetelahTransaksi = todaySpent + amount;
+
+          if (totalSetelahTransaksi > dailyBudget) {
+            // Tanya konfirmasi sebelum lanjut
+            final confirmed = await Get.dialog<bool>(
+              AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Get.back(result: false),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.grey),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Batalkan', style: TextStyle(color: Colors.grey)),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFF3CD),
+                        shape: BoxShape.circle,
                       ),
+                      child: const Icon(Icons.calendar_today_outlined,
+                          color: Color(0xFFF59E0B), size: 38),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Get.back(result: true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF59E0B),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Tetap Lanjut'),
-                      ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Melewati Budget Harian',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      todaySpent > 0
+                          ? 'Total pengeluaran hari ini untuk "${_selectedCategory.value}" '
+                            'akan menjadi ${AppHelpers.formatCurrency(totalSetelahTransaksi)}, '
+                            'melebihi budget harian sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
+                            'Kamu sudah menghabiskan ${AppHelpers.formatCurrency(todaySpent)} hari ini.'
+                          : 'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) '
+                            'melebihi budget harian kategori "${_selectedCategory.value}" '
+                            'sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
+                            'Melanjutkan dapat mengganggu rencana keuangan harianmu.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.blueGrey, fontSize: 13, height: 1.5),
                     ),
                   ],
                 ),
-              ],
-            ),
-          );
-          if (confirmed != true) return; // User pilih Batalkan
+                actions: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Get.back(result: false),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.grey),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Batalkan', style: TextStyle(color: Colors.grey)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Get.back(result: true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF59E0B),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Tetap Lanjut'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+            if (confirmed != true) return; // User pilih Batalkan
+          }
         }
       }
 

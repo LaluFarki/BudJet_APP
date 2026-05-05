@@ -12,30 +12,77 @@ class AuthController extends GetxController {
 
   var isLoading = false.obs;
 
-  // Login dengan Email dan Password
+  // ─── Mapper kode error Firebase → pesan Bahasa Indonesia ───────────────────
+  String _pesanError(FirebaseAuthException e, {required String konteks}) {
+    switch (e.code) {
+      // ── Kredensial ──
+      case 'invalid-credential':
+      case 'wrong-password':
+        return 'Email tidak terdaftar atau kata sandi yang kamu masukkan salah. '
+            'Pastikan akun sudah dibuat, atau coba daftar terlebih dahulu.';
+      case 'user-not-found':
+        return konteks == 'reset'
+            ? 'Email ini belum terdaftar. Pastikan kamu memasukkan email yang benar.'
+            : 'Akun dengan email ini tidak ditemukan. Silakan daftar terlebih dahulu.';
+      case 'invalid-email':
+        return 'Format email tidak valid. Contoh yang benar: nama@email.com';
+      case 'user-disabled':
+        return 'Akun ini telah dinonaktifkan. Hubungi kami untuk bantuan lebih lanjut.';
+      // ── Pendaftaran ──
+      case 'email-already-in-use':
+        return 'Email ini sudah digunakan akun lain. Silakan gunakan email berbeda atau langsung login.';
+      case 'weak-password':
+        return 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter dengan kombinasi huruf dan angka.';
+      case 'operation-not-allowed':
+        return 'Metode login ini belum diaktifkan. Silakan hubungi kami.';
+      // ── Jaringan & Batas ──
+      case 'network-request-failed':
+        return 'Gagal terhubung ke internet. Periksa koneksi internetmu dan coba lagi.';
+      case 'too-many-requests':
+        return 'Terlalu banyak percobaan login. Akun sementara dikunci. Coba lagi beberapa menit kemudian.';
+      // ── Google / Credential linking ──
+      case 'account-exists-with-different-credential':
+        return 'Email ini sudah terdaftar menggunakan kata sandi. Silakan login dengan Email dan Kata Sandi kamu.';
+      case 'popup-closed-by-user':
+        return 'Proses login dibatalkan. Coba lagi jika kamu ingin melanjutkan.';
+      // ── Fallback ──
+      default:
+        return 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
+    }
+  }
+
+  // ─── Login dengan Email dan Password ───────────────────────────────────────
   Future<void> loginWithEmail(String email, String password) async {
     try {
       isLoading.value = true;
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       _checkOnboardingAndNavigate();
     } on FirebaseAuthException catch (e) {
-      Get.snackbar('Login Gagal', e.message ?? 'Terjadi kesalahan');
+      Get.snackbar(
+        'Login Gagal',
+        _pesanError(e, konteks: 'login'),
+        backgroundColor: const Color(0xFFFFECEC),
+        colorText: const Color(0xFF8B0000),
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Daftar dengan Email dan Password
+  // ─── Daftar dengan Email dan Password ──────────────────────────────────────
   Future<void> registerWithEmail(String email, String password) async {
     try {
       isLoading.value = true;
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
 
-      // Simpan data pengguna ke Firestore
       if (userCredential.user != null) {
         await _firestore.collection('users').doc(userCredential.user!.uid).set({
-          'name': 'Pengguna Baru', // Nama default, nanti bisa diubah user
+          'name': 'Pengguna Baru',
           'email': email,
           'profilePic': '',
           'budgetBulanan': 0,
@@ -44,16 +91,34 @@ class AuthController extends GetxController {
         });
       }
 
-      Get.snackbar('Sukses', 'Akun berhasil dibuat. Silakan login.');
+      Get.snackbar(
+        'Pendaftaran Berhasil 🎉',
+        'Akun berhasil dibuat. Silakan masuk dengan email dan kata sandimu.',
+        backgroundColor: const Color(0xFFECFFEC),
+        colorText: const Color(0xFF1B5E20),
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
       Get.offAllNamed(AppRoutes.login);
     } on FirebaseAuthException catch (e) {
-      Get.snackbar('Pendaftaran Gagal', e.message ?? 'Terjadi kesalahan');
+      Get.snackbar(
+        'Pendaftaran Gagal',
+        _pesanError(e, konteks: 'register'),
+        backgroundColor: const Color(0xFFFFECEC),
+        colorText: const Color(0xFF8B0000),
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Login dengan Google
+  // ─── Login dengan Google ────────────────────────────────────────────────────
   Future<void> loginWithGoogle() async {
     try {
       isLoading.value = true;
@@ -64,7 +129,7 @@ class AuthController extends GetxController {
         googleUser = await GoogleSignIn.instance.authenticate();
       } catch (e) {
         isLoading.value = false;
-        return;
+        return; // User menutup popup Google, tidak perlu tampilkan error
       }
 
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
@@ -76,13 +141,19 @@ class AuthController extends GetxController {
       );
 
       try {
-        UserCredential userCredential = await _auth.signInWithCredential(googleCredential);
+        UserCredential userCredential =
+            await _auth.signInWithCredential(googleCredential);
 
-        // Cek apakah ini user baru di Firestore
         if (userCredential.user != null) {
-          final userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+          final userDoc = await _firestore
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .get();
           if (!userDoc.exists) {
-            await _firestore.collection('users').doc(userCredential.user!.uid).set({
+            await _firestore
+                .collection('users')
+                .doc(userCredential.user!.uid)
+                .set({
               'name': userCredential.user!.displayName ?? 'Pengguna',
               'email': userCredential.user!.email,
               'profilePic': userCredential.user!.photoURL ?? '',
@@ -93,44 +164,72 @@ class AuthController extends GetxController {
           }
         }
         _checkOnboardingAndNavigate();
-
       } on FirebaseAuthException catch (e) {
-        if (e.code == 'account-exists-with-different-credential') {
-          // Email sudah terdaftar pakai Email/Password
-          Get.snackbar(
-            'Login Gagal',
-            'Email ini sudah terdaftar menggunakan kata sandi. Silakan login dengan Email dan Kata Sandi kamu.',
-            duration: const Duration(seconds: 4),
-          );
-        } else {
-          Get.snackbar('Google Login Gagal', e.message ?? e.code);
-        }
+        Get.snackbar(
+          'Login Google Gagal',
+          _pesanError(e, konteks: 'google'),
+          backgroundColor: const Color(0xFFFFECEC),
+          colorText: const Color(0xFF8B0000),
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 4),
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+        );
       }
     } catch (e) {
-      Get.snackbar('Google Login Gagal', e.toString());
+      Get.snackbar(
+        'Login Google Gagal',
+        'Terjadi masalah saat login dengan Google. Pastikan kamu terhubung ke internet.',
+        backgroundColor: const Color(0xFFFFECEC),
+        colorText: const Color(0xFF8B0000),
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Reset Password via Email
-  Future<void> sendPasswordResetEmail(String email, {VoidCallback? onSuccess}) async {
+  // ─── Reset Password via Email ───────────────────────────────────────────────
+  Future<void> sendPasswordResetEmail(String email,
+      {VoidCallback? onSuccess}) async {
     try {
       isLoading.value = true;
       await _auth.sendPasswordResetEmail(email: email);
       if (onSuccess != null) {
         onSuccess();
       } else {
-        Get.snackbar('Terkirim', 'Tautan atur ulang kata sandi telah dikirim ke $email');
+        Get.snackbar(
+          'Email Terkirim ✉️',
+          'Tautan untuk mengatur ulang kata sandi telah dikirim ke $email. '
+              'Periksa kotak masuk atau folder spam kamu.',
+          backgroundColor: const Color(0xFFECFFEC),
+          colorText: const Color(0xFF1B5E20),
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 5),
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+        );
       }
     } on FirebaseAuthException catch (e) {
-      Get.snackbar('Gagal', e.message ?? 'Gagal mengirim email reset');
+      Get.snackbar(
+        'Gagal Mengirim Email',
+        _pesanError(e, konteks: 'reset'),
+        backgroundColor: const Color(0xFFFFECEC),
+        colorText: const Color(0xFF8B0000),
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Logout
+  // ─── Logout ─────────────────────────────────────────────────────────────────
   Future<void> logout() async {
     await _auth.signOut();
     try {
@@ -139,11 +238,21 @@ class AuthController extends GetxController {
     Get.offAllNamed(AppRoutes.login);
   }
 
+  // ─── Cek onboarding & navigasi ─────────────────────────────────────────────
   Future<void> _checkOnboardingAndNavigate() async {
-    final prefs = await SharedPreferences.getInstance();
-    bool isOnboardingDone = prefs.getBool('isOnboardingDone') ?? false;
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      Get.offAllNamed(AppRoutes.login);
+      return;
+    }
 
-    if (isOnboardingDone) {
+    // Selalu cek Firestore agar konsisten lintas perangkat
+    final doc = await _firestore.collection('users').doc(uid).get();
+    final data = doc.data();
+
+    if (doc.exists && data != null && (data['budgetBulanan'] ?? 0) > 0) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isOnboardingDone', true);
       Get.offAllNamed(AppRoutes.home);
     } else {
       Get.offAllNamed(AppRoutes.awal);

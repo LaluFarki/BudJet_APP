@@ -1,12 +1,19 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../auth/controllers/auth_controller.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -184,49 +191,272 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // Dialog konfirmasi awal
   void _showDeleteAccountDialog(BuildContext context) {
     Get.dialog(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Hapus Akun?',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        content: const Text(
-          'Semua data transaksi dan budgetmu akan dihapus permanen dan tidak bisa dipulihkan.\n\nApakah kamu yakin?',
-          style: TextStyle(fontSize: 13, color: Colors.blueGrey, height: 1.5),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFECEC),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_forever_outlined,
+                  color: Color(0xFFEC6A6A), size: 38),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Hapus Akun?',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Semua data transaksi dan budget kamu akan dihapus permanen dan tidak bisa dipulihkan.',
+              style: TextStyle(fontSize: 13, color: Colors.blueGrey, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Get.back();
-              try {
-                await FirebaseAuth.instance.currentUser?.delete();
-                final authCtrl = Get.find<AuthController>();
-                authCtrl.logout();
-              } catch (e) {
-                Get.snackbar(
-                  'Gagal',
-                  'Silakan login ulang terlebih dahulu sebelum menghapus akun.',
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEC6A6A),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Get.back(),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.grey),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Batal',
+                      style: TextStyle(color: Colors.grey)),
+                ),
               ),
-            ),
-            child: const Text('Hapus'),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Get.back();
+                    _showPasswordConfirmDialog(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEC6A6A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Lanjut'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  // Dialog input kata sandi / re-autentikasi Google
+  void _showPasswordConfirmDialog(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Cek apakah user login via Google
+    final isGoogle = user.providerData
+        .any((p) => p.providerId == 'google.com');
+
+    if (isGoogle) {
+      _deleteWithGoogle(user);
+      return;
+    }
+
+    // Login via Email/Password → minta kata sandi
+    final passwordCtrl = TextEditingController();
+    final isObscure = ValueNotifier<bool>(true);
+    final isDeleting = ValueNotifier<bool>(false);
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Konfirmasi Kata Sandi',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Masukkan kata sandi kamu untuk mengkonfirmasi penghapusan akun.',
+              style: TextStyle(
+                  fontSize: 13, color: Colors.blueGrey, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            ValueListenableBuilder<bool>(
+              valueListenable: isObscure,
+              builder: (_, obscure, __) => TextField(
+                controller: passwordCtrl,
+                obscureText: obscure,
+                decoration: InputDecoration(
+                  labelText: 'Kata Sandi',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  suffixIcon: IconButton(
+                    icon: Icon(obscure
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined),
+                    onPressed: () => isObscure.value = !isObscure.value,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Get.back(),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.grey),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Batal',
+                      style: TextStyle(color: Colors.grey)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: isDeleting,
+                  builder: (_, deleting, __) => ElevatedButton(
+                    onPressed: deleting
+                        ? null
+                        : () async {
+                            if (passwordCtrl.text.isEmpty) {
+                              Get.snackbar(
+                                'Kata Sandi Kosong',
+                                'Masukkan kata sandi terlebih dahulu.',
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                              return;
+                            }
+                            isDeleting.value = true;
+                            await _deleteWithPassword(
+                                user, passwordCtrl.text);
+                            isDeleting.value = false;
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEC6A6A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: deleting
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Hapus Akun'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Future<void> _deleteWithPassword(User user, String password) async {
+    try {
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await _hapusDataFirestore(user.uid);
+      await user.delete();
+      Get.back(); // Tutup dialog
+      Get.offAllNamed('/login');
+      Get.snackbar(
+        'Akun Dihapus',
+        'Akun dan semua datamu telah dihapus secara permanen.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFECFFEC),
+        colorText: const Color(0xFF1B5E20),
+      );
+    } on FirebaseAuthException catch (e) {
+      String pesan;
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        pesan = 'Kata sandi yang kamu masukkan salah. Coba lagi.';
+      } else if (e.code == 'too-many-requests') {
+        pesan = 'Terlalu banyak percobaan. Coba beberapa saat lagi.';
+      } else {
+        pesan = 'Gagal menghapus akun. Silakan coba lagi.';
+      }
+      Get.snackbar(
+        'Gagal',
+        pesan,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFFFECEC),
+        colorText: const Color(0xFF8B0000),
+      );
+    }
+  }
+
+  Future<void> _deleteWithGoogle(User user) async {
+    try {
+      await GoogleSignIn.instance.initialize();
+      final googleUser = await GoogleSignIn.instance.authenticate();
+      final googleAuth = googleUser.authentication;
+      final authz = await googleUser.authorizationClient.authorizationForScopes([]);
+      final credential = GoogleAuthProvider.credential(
+        accessToken: authz?.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await _hapusDataFirestore(user.uid);
+      await user.delete();
+      Get.offAllNamed('/login');
+      Get.snackbar(
+        'Akun Dihapus',
+        'Akun dan semua datamu telah dihapus secara permanen.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Gagal',
+        'Gagal menghapus akun. Silakan coba lagi.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFFFECEC),
+        colorText: const Color(0xFF8B0000),
+      );
+    }
+  }
+
+  // Hapus semua data user dari Firestore
+  Future<void> _hapusDataFirestore(String uid) async {
+    final ref = FirebaseFirestore.instance.collection('users').doc(uid);
+    // Hapus sub-koleksi transaksi
+    final txSnap = await ref.collection('transactions').get();
+    for (final doc in txSnap.docs) {
+      await doc.reference.delete();
+    }
+    // Hapus dokumen utama
+    await ref.delete();
   }
 
   void _showFaqDialog(BuildContext context) {
