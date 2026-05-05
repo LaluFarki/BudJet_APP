@@ -19,7 +19,10 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Inisialisasi controller GetX
-    Get.put(TransactionController());
+    
+    if (!Get.isRegistered<TransactionController>()) {
+      Get.put(TransactionController());
+    }
     final profileCtrl = Get.put(ProfileController());
 
     return Scaffold(

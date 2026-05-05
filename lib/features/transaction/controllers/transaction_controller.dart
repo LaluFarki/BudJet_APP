@@ -7,7 +7,7 @@ class TransactionController extends GetxController {
   // Untuk mencegah double submit saat tambah income
   var isAddingIncome = false.obs;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _uid = FirebaseAuth.instance.currentUser!.uid;
+  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
   // RxList untuk menampung semua transaksi agar UI bisa update otomatis (Reaktif)
   var transactions = <TransactionModel>[].obs;
@@ -26,6 +26,10 @@ class TransactionController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    
     _txnCollection = _firestore
         .collection('users')
         .doc(_uid)

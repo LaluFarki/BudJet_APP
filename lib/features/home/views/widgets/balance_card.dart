@@ -12,6 +12,14 @@ class BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if(!Get.isRegistered<TransactionController>()){
+      return const Text('Rp 0', style: TextStyle(
+        color: AppColors.textDark,
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+      ));
+    }
+    
     final txCtrl = Get.find<TransactionController>();
 
     return Container(
