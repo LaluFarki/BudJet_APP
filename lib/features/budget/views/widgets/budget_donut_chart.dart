@@ -54,7 +54,7 @@ class BudgetDonutChart extends StatelessWidget {
                 totalText,
                 style: const TextStyle(
                   color: Color(0xFF1E1E1E), // textDark
-                  fontSize: 24,
+                  fontSize: 16, // Dikurangi dari 24 agar tidak terlalu besar
                   fontWeight: FontWeight.bold,
                 ),
               ),

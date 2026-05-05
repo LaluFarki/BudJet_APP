@@ -14,10 +14,15 @@ class _ThousandsSeparatorFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
-    final digits = newValue.text.replaceAll('.', '');
+    // Hanya ambil angka
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.isEmpty) return newValue.copyWith(text: '');
+    
+    final parsed = int.tryParse(digits);
+    if (parsed == null) return newValue.copyWith(text: '');
+
     final formatted =
-        NumberFormat('#,###', 'id_ID').format(int.parse(digits));
+        NumberFormat('#,###', 'id_ID').format(parsed);
     return newValue.copyWith(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
@@ -481,7 +486,10 @@ class AddTransactionScreen extends StatelessWidget {
                         child: TextFormField(
                           controller: _amountController,
                           keyboardType: TextInputType.number,
-                          inputFormatters: [_ThousandsSeparatorFormatter()],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            _ThousandsSeparatorFormatter(),
+                          ],
                           onChanged: (val) {
                             final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
                             double parsed = double.tryParse(digits) ?? 0;
@@ -524,6 +532,9 @@ class AddTransactionScreen extends StatelessWidget {
                           validator: (val) {
                             if (val == null || val.isEmpty) {
                               return 'Isi nominal';
+                            }
+                            if (val.contains(RegExp(r'[^0-9.]'))) {
+                              return 'Hanya menerima input angka';
                             }
                             final cleanVal = val.replaceAll(
                               RegExp(r'[^0-9]'),

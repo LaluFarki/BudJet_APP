@@ -200,12 +200,19 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
-                        child: TextField(
+                        child: TextFormField(
                           controller: _budgetController,
                           keyboardType: TextInputType.number,
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
                           ],
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: (val) {
+                            if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
+                              return 'Hanya menerima input angka';
+                            }
+                            return null;
+                          },
                           decoration: const InputDecoration(
                             prefixText: 'Rp ',
                             border: InputBorder.none,
