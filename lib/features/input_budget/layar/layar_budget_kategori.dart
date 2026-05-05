@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'package:budjet/features/algoritma_pembagian/algoritma_pembagian.dart';
+import 'package:budjet/features/algoritma_pembagian/smart_budget_engine.dart';
+import 'package:budjet/features/algoritma_pembagian/smart_budget_model.dart';
 import 'layar_analisis_budget.dart';
 import '../../../../core/utils/app_helpers.dart';
 
@@ -25,7 +26,17 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   late List<TextEditingController> controllers;
   late List<String> periodeList;
 
-  late final BudgetController _budgetCtrl;
+  final SmartBudgetEngine _engine = SmartBudgetEngine();
+
+  double get _budgetHarian {
+    final jumlahHari = DateTime(
+      widget.bulan.year,
+      widget.bulan.month + 1,
+      0,
+    ).day;
+
+    return widget.budgetBulanan / jumlahHari;
+  }
 
   final NumberFormat _currencyFormat = NumberFormat.currency(
     locale: 'id_ID',
@@ -35,36 +46,36 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
 
   double get _totalDialokasikan {
     double total = 0;
-    for (final c in controllers) {
-      total += _parseRupiah(c.text);
+
+    for (int i = 0; i < controllers.length; i++) {
+      final nominal = _parseRupiah(controllers[i].text);
+      final period = _periodFromString(periodeList[i]);
+
+      total += _engine.convertToMonthly(nominal, period);
     }
+
     return total;
   }
 
   double get _sisaBelumDialokasikan =>
       widget.budgetBulanan - _totalDialokasikan;
 
-  bool get _isValid => _sisaBelumDialokasikan.abs() < 1;
+  bool get _isOverBudget => _sisaBelumDialokasikan < 0;
+
+  bool get _isAlokasiPas => _sisaBelumDialokasikan.abs() < 1;
+
+  bool get _isValid => !_isOverBudget;
 
   @override
   void initState() {
     super.initState();
 
-    _budgetCtrl = BudgetController();
-    _budgetCtrl.inisialisasi(
-      budgetBulanan: widget.budgetBulanan,
-      bulan: widget.bulan,
-    );
-
     controllers = List.generate(
       widget.kategoriList.length,
-          (_) => TextEditingController(),
+      (_) => TextEditingController(),
     );
 
-    periodeList = List.generate(
-      widget.kategoriList.length,
-          (_) => 'Mingguan',
-    );
+    periodeList = List.generate(widget.kategoriList.length, (_) => 'Mingguan');
 
     for (final c in controllers) {
       c.addListener(() => setState(() {}));
@@ -82,6 +93,19 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   double _parseRupiah(String text) {
     final angka = text.replaceAll(RegExp(r'[^0-9]'), '');
     return double.tryParse(angka) ?? 0;
+  }
+
+  BudgetPeriod _periodFromString(String value) {
+    switch (value) {
+      case 'Harian':
+        return BudgetPeriod.daily;
+      case 'Mingguan':
+        return BudgetPeriod.weekly;
+      case 'Bulanan':
+        return BudgetPeriod.monthly;
+      default:
+        return BudgetPeriod.monthly;
+    }
   }
 
   void _formatRupiah(TextEditingController controller, String value) {
@@ -115,10 +139,26 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
       return;
     }
 
-    final Map<String, double> allocations = {};
+    if (_sisaBelumDialokasikan > 0) {
+      _showSisaDanaConfirmation();
+      return;
+    }
+
+    _goToAnalisisBudget();
+  }
+
+  void _goToAnalisisBudget() {
+    final List<BudgetCategory> categories = [];
+
     for (int i = 0; i < widget.kategoriList.length; i++) {
-      allocations[widget.kategoriList[i]] =
-          _parseRupiah(controllers[i].text);
+      categories.add(
+        BudgetCategory(
+          id: widget.kategoriList[i],
+          name: widget.kategoriList[i],
+          amount: _parseRupiah(controllers[i].text),
+          period: _periodFromString(periodeList[i]),
+        ),
+      );
     }
 
     Navigator.push(
@@ -126,12 +166,41 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
       MaterialPageRoute(
         builder: (_) => LayarAnalisisBudget(
           budgetBulanan: widget.budgetBulanan,
-          budgetHarian: _budgetCtrl.budgetHarian,
+          budgetHarian: _budgetHarian,
           bulan: widget.bulan,
-          kategoriList: widget.kategoriList,
-          allocations: allocations,
+          categories: categories,
         ),
       ),
+    );
+  }
+
+  void _showSisaDanaConfirmation() {
+    final sisa = _sisaBelumDialokasikan;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Saldo Masih Tersisa'),
+          content: Text(
+            'Masih ada ${_currencyFormat.format(sisa.toInt())} yang belum dialokasikan. '
+            'Saldo ini akan otomatis dimasukkan ke kategori Sisa Dana.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cek Lagi'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _goToAnalisisBudget();
+              },
+              child: const Text('Lanjutkan'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -143,8 +212,9 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
       context: context,
       builder: (context) {
         return Dialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           backgroundColor: const Color(0xFFE57373),
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -153,9 +223,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isOver
-                      ? 'Budget Melebihi Batas'
-                      : 'Saldo Masih Tersisa',
+                  isOver ? 'Budget Melebihi Batas' : 'Saldo Masih Tersisa',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -174,10 +242,12 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('OK',
-                        style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -189,8 +259,8 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   @override
   Widget build(BuildContext context) {
     final sisa = _sisaBelumDialokasikan;
-    final isOver = sisa < 0;
-
+    final isOver = _isOverBudget;
+    final isPas = _isAlokasiPas;
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
       body: SafeArea(
@@ -223,18 +293,18 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                       : Colors.orange.shade50,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: _isValid
-                        ? Colors.green.shade300
+                    color: isPas
+                        ? Colors.green.shade50
                         : isOver
-                        ? Colors.red.shade300
-                        : Colors.orange.shade300,
+                        ? Colors.red.shade50
+                        : Colors.orange.shade50,
                   ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _isValid
+                      isPas
                           ? '✅ Alokasi sudah pas!'
                           : isOver
                           ? '⚠️ Melebihi budget'
@@ -250,7 +320,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                       ),
                     ),
                     Text(
-                      _isValid
+                      isPas
                           ? 'Rp 0'
                           : _currencyFormat.format(sisa.abs().toInt()),
                       style: TextStyle(
@@ -285,7 +355,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
                             blurRadius: 10,
-                          )
+                          ),
                         ],
                       ),
                       child: Column(
@@ -304,8 +374,9 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                               Text(
                                 kategori,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
-                              )
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -316,7 +387,11 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                             onChanged: (value) =>
                                 _formatRupiah(controllers[index], value),
                             decoration: InputDecoration(
-                              hintText: 'Budget Anda',
+                              hintText:
+                                  'Nominal per ${periodeList[index].toLowerCase()}',
+                              helperText:
+                                  'Masukkan jatah ${kategori.toLowerCase()} untuk 1 ${periodeList[index].toLowerCase()}',
+                              helperStyle: const TextStyle(fontSize: 12),
                               filled: true,
                               fillColor: const Color(0xFFF1F3F6),
                               border: OutlineInputBorder(
@@ -335,27 +410,28 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
-                              children: ['Harian', 'Mingguan', 'Bulanan']
-                                  .map((item) {
-                                final selected =
-                                    periodeList[index] == item;
+                              children: ['Harian', 'Mingguan', 'Bulanan'].map((
+                                item,
+                              ) {
+                                final selected = periodeList[index] == item;
 
                                 return Expanded(
                                   child: GestureDetector(
                                     onTap: () {
                                       setState(() {
                                         periodeList[index] = item;
+                                        controllers[index].clear();
                                       });
                                     },
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
-                                          vertical: 10),
+                                        vertical: 10,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: selected
                                             ? const Color(0xFFD6E85A)
                                             : Colors.transparent,
-                                        borderRadius:
-                                        BorderRadius.circular(16),
+                                        borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Center(
                                         child: Text(
@@ -404,10 +480,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: const Text(
-                    'Lanjut →',
-                    style: TextStyle(fontSize: 22),
-                  ),
+                  child: const Text('Lanjut →', style: TextStyle(fontSize: 22)),
                 ),
               ),
 
