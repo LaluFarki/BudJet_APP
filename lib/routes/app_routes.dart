@@ -15,6 +15,7 @@ import '../features/auth/views/login_screen.dart';
 import '../features/auth/views/register_screen.dart';
 import '../features/auth/views/forgot_password_screen.dart';
 import '../features/settings/views/settings_screen.dart';
+import '../features/transaction/views/voice_transaction_screen.dart';
 
 class AppRoutes {
   // Default route
@@ -35,6 +36,7 @@ class AppRoutes {
   static const String dataDiri = '/data-diri';
   static const String riwayatTransaksi = '/riwayat-transaksi';
   static const String todayTx = '/today-tx';
+  static const String voiceTx = '/voice-tx';
   static const String addTx = '/add-tx';
   static const String successTx = '/success-tx';
   static const String settings = '/settings';
@@ -58,6 +60,8 @@ class AppRoutes {
       dataDiri: (context) => const DataDiriScreen(),
 
       riwayatTransaksi: (context) => const RiwayatTransaksiScreen(),
+
+      voiceTx: (context) => const VoiceTransactionScreen(),
 
       todayTx: (context) => const TodayTransactionsScreen(),
 

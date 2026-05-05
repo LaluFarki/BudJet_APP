@@ -26,19 +26,30 @@ class _ThousandsSeparatorFormatter extends TextInputFormatter {
 }
 
 class AddTransactionScreen extends StatelessWidget {
-  AddTransactionScreen({super.key}) {
-    // Load kategori dari Firestore (budget user)
+  // Load kategori dari Firestore (budget user)
+  final bool isVoiceDraft;
+  final TransactionModel? existingTx;
+
+  AddTransactionScreen({super.key})
+      : isVoiceDraft = Get.arguments is Map && (Get.arguments as Map)['isVoiceDraft'] == true,
+        existingTx = Get.arguments is TransactionModel ? Get.arguments as TransactionModel : null {
     _loadCategories();
 
-    final TransactionModel? existingTx = Get.arguments as TransactionModel?;
-    if (existingTx != null) {
-      _titleController.text = existingTx.title;
-      // Tampilkan angka dengan titik pemisah saat mode edit
-      final formatted = NumberFormat('#,###', 'id_ID')
-          .format(existingTx.amount.toInt());
-      _amountController.text = formatted;
-      _selectedCategory.value = existingTx.kategori;
-      _selectedDate.value = existingTx.date;
+    // Persiapkan model mana yang akan dipakai untuk mengisi Field form
+    TransactionModel? draftToFill;
+
+    if (isVoiceDraft) {
+      draftToFill = (Get.arguments as Map)['draftTx'] as TransactionModel;
+    } else if (existingTx != null) {
+      draftToFill = existingTx;
+    }
+
+    // Jika ada data (dari Edit atau Voice Draft), isi controller form secara otomatis
+    if (draftToFill != null) {
+      _titleController.text = draftToFill.title;
+      _amountController.text = NumberFormat('#,###', 'id_ID').format(draftToFill.amount.toInt());
+      _selectedCategory.value = draftToFill.kategori;
+      _selectedDate.value = draftToFill.date;
     }
   }
 
@@ -201,7 +212,7 @@ class AddTransactionScreen extends StatelessWidget {
 
   void _submit() async {
     if (_formKey.currentState!.validate()) {
-      final TransactionModel? existingTx = Get.arguments as TransactionModel?;
+      // final TransactionModel? existingTx = Get.arguments as TransactionModel?;
       final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
       final amount = double.parse(cleanAmount.isEmpty ? '0' : cleanAmount);
 
@@ -363,7 +374,7 @@ class AddTransactionScreen extends StatelessWidget {
       );
 
       if (existingTx != null) {
-        await txController.updateTransaction(existingTx, newTransaction);
+        await txController.updateTransaction(existingTx!, newTransaction);
       } else {
         await txController.addTransaction(newTransaction);
       }
@@ -390,7 +401,7 @@ class AddTransactionScreen extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          Get.arguments != null ? 'Edit Transaksi' : 'Tambah Transaksi',
+          existingTx != null ? 'Edit Transaksi' : 'Tambah Transaksi',
           style: const TextStyle(
             color: AppColors.textDark,
             fontWeight: FontWeight.bold,
@@ -527,7 +538,7 @@ class AddTransactionScreen extends StatelessWidget {
                       ),
                       // Indikator sisa saldo real-time
                       Obx(() {
-                        final existingTx = Get.arguments as TransactionModel?;
+                        // final existingTx = Get.arguments as TransactionModel?;
                         if (existingTx != null) return const SizedBox.shrink();
                         final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
                         final setelahTransaksi = sisaSaldo - _enteredAmount.value;
@@ -791,7 +802,7 @@ class AddTransactionScreen extends StatelessWidget {
                 children: [
                   // === Teks Sudah Cocok? ===
                   Text(
-                    Get.arguments != null
+                    existingTx != null
                         ? 'Simpan Perubahan?'
                         : 'Sudah Cocok?',
                     style: const TextStyle(
