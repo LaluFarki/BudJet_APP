@@ -121,6 +121,8 @@ class AddTransactionScreen extends StatelessWidget {
   final _amountController = TextEditingController();
   final RxString _selectedCategory = ''.obs;
   final RxDouble _enteredAmount = 0.0.obs; // Jumlah yg sedang diketik
+  // Budget harian per kategori {namaKategori: budgetHarian}
+  final RxMap<String, double> _categoryDailyBudget = <String, double>{}.obs;
 
   // Tanggal Picker
   final Rx<DateTime> _selectedDate = DateTime.now().obs;
@@ -161,6 +163,15 @@ class AddTransactionScreen extends StatelessWidget {
             .map((e) => (e as Map<String, dynamic>)['nama'] as String? ?? '')
             .where((n) => n.isNotEmpty)
             .toList();
+        // Ambil budget harian per kategori
+        final Map<String, double> dailyMap = {};
+        for (final e in categoriesRaw) {
+          final map = e as Map<String, dynamic>;
+          final nama = map['nama'] as String? ?? '';
+          final harian = (map['harian'] ?? 0).toDouble();
+          if (nama.isNotEmpty) dailyMap[nama] = harian;
+        }
+        _categoryDailyBudget.value = dailyMap;
       }
     }
 
@@ -194,7 +205,7 @@ class AddTransactionScreen extends StatelessWidget {
       final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
       final amount = double.parse(cleanAmount.isEmpty ? '0' : cleanAmount);
 
-      // Cek saldo jika ini transaksi pengeluaran (bukan edit)
+      // Cek saldo jika ini transaksi baru (bukan edit)
       if (existingTx == null) {
         final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
         if (amount > sisaSaldo) {
@@ -244,6 +255,97 @@ class AddTransactionScreen extends StatelessWidget {
             ),
           );
           return;
+        }
+
+        // Cek budget harian kategori (kumulatif: total hari ini + transaksi baru)
+        final dailyBudget = _categoryDailyBudget[_selectedCategory.value] ?? 0;
+        if (dailyBudget > 0) {
+          final today = DateTime.now();
+          // Hitung total pengeluaran hari ini untuk kategori yang dipilih
+          final todaySpent = txController.transactions
+              .where((t) =>
+                  t.type == 'expense' &&
+                  t.kategori == _selectedCategory.value &&
+                  t.date.year == today.year &&
+                  t.date.month == today.month &&
+                  t.date.day == today.day)
+              .fold(0.0, (sum, t) => sum + t.amount);
+
+          final totalSetelahTransaksi = todaySpent + amount;
+
+          if (totalSetelahTransaksi > dailyBudget) {
+            // Tanya konfirmasi sebelum lanjut
+            final confirmed = await Get.dialog<bool>(
+              AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFF3CD),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.calendar_today_outlined,
+                          color: Color(0xFFF59E0B), size: 38),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Melewati Budget Harian',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      todaySpent > 0
+                          ? 'Total pengeluaran hari ini untuk "${_selectedCategory.value}" '
+                            'akan menjadi ${AppHelpers.formatCurrency(totalSetelahTransaksi)}, '
+                            'melebihi budget harian sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
+                            'Kamu sudah menghabiskan ${AppHelpers.formatCurrency(todaySpent)} hari ini.'
+                          : 'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) '
+                            'melebihi budget harian kategori "${_selectedCategory.value}" '
+                            'sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
+                            'Melanjutkan dapat mengganggu rencana keuangan harianmu.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.blueGrey, fontSize: 13, height: 1.5),
+                    ),
+                  ],
+                ),
+                actions: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Get.back(result: false),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.grey),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Batalkan', style: TextStyle(color: Colors.grey)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Get.back(result: true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF59E0B),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Tetap Lanjut'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+            if (confirmed != true) return; // User pilih Batalkan
+          }
         }
       }
 
@@ -371,8 +473,19 @@ class AddTransactionScreen extends StatelessWidget {
                           inputFormatters: [_ThousandsSeparatorFormatter()],
                           onChanged: (val) {
                             final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
-                            _enteredAmount.value =
-                                double.tryParse(digits) ?? 0;
+                            double parsed = double.tryParse(digits) ?? 0;
+                            // Batasi input agar tidak melebihi sisa saldo
+                            final sisaSaldo = txController.budgetBulanan.value -
+                                txController.totalExpense;
+                            if (sisaSaldo > 0 && parsed > sisaSaldo) {
+                              parsed = sisaSaldo.floorToDouble();
+                              final capped = NumberFormat('#,###', 'id_ID')
+                                  .format(parsed.toInt());
+                              _amountController.text = capped;
+                              _amountController.selection =
+                                  TextSelection.collapsed(offset: capped.length);
+                            }
+                            _enteredAmount.value = parsed;
                           },
                           decoration: const InputDecoration(
                             labelText: 'Nominal',
