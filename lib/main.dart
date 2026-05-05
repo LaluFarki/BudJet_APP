@@ -25,21 +25,22 @@ void main() async {
       await FirebaseAuth.instance.signOut();
       initialRoute = AppRoutes.login;
     } else {
-      final prefs = await SharedPreferences.getInstance();
-      bool isOnboardingDone = prefs.getBool('isOnboardingDone') ?? false;
+      // ✅ Selalu cek Firestore langsung (tidak andalkan SharedPreferences)
+      // Ini memastikan user yang pindah perangkat/browser tetap masuk home
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+      final data = doc.data();
 
-      // ── Validasi ganda: cek juga apakah dokumen Firestore masih ada ──
-      if (isOnboardingDone) {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
-        final data = doc.data();
-        // Kalau dokumen tidak ada ATAU belum ada budgetBulanan → reset onboarding
-        if (!doc.exists || data == null || !data.containsKey('budgetBulanan')) {
-          await prefs.setBool('isOnboardingDone', false);
-          initialRoute = AppRoutes.awal;
-        } else {
-          initialRoute = AppRoutes.home;
-        }
+      if (doc.exists && data != null && (data['budgetBulanan'] ?? 0) > 0) {
+        // Dokumen & budget ada → langsung ke home
+        initialRoute = AppRoutes.home;
+        // Sinkronkan SharedPreferences jika belum
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isOnboardingDone', true);
       } else {
+        // Akun ada tapi belum isi budget → ke onboarding
         initialRoute = AppRoutes.awal;
       }
     }

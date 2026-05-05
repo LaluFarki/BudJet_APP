@@ -85,9 +85,8 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
         });
       }
 
-      // Simpan ke Firestore — satu dokumen di users/{uid}
-      // Kita hilangkan await agar tidak memblokir UI jika internet lambat / Firestore nyangkut
-      FirebaseFirestore.instance.collection('users').doc(uid).set({
+      // Simpan ke Firestore — HARUS await agar data sudah ada saat home screen dibuka
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'budgetBulanan': widget.budgetBulanan,
         'budgetHarian': widget.budgetHarian,
         'bulan': widget.bulan.toIso8601String(),
@@ -96,9 +95,7 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
         'allocations': widget.allocations,
         'balance': widget.budgetBulanan, // ← Saldo awal = total budget bulanan
         'createdAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true)).catchError((e) {
-        debugPrint('Gagal sinkron budget ke Firebase: $e');
-      });
+      }, SetOptions(merge: true));
 
       // Tandai onboarding selesai
       final prefs = await SharedPreferences.getInstance();
