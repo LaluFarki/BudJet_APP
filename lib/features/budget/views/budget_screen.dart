@@ -325,20 +325,19 @@ class BudgetScreen extends StatelessWidget {
 
                           // 2. Rincian Budget Bulanan
                           _buildRincianCard(
-                            title: 'Rincian Budget Sesuai Periode',
+                            title: 'Rincian Budget Bulanan',
                             count: categories.length,
                             children: categories.asMap().entries.map((e) {
                               final nama = e.value['nama'] as String? ?? '';
-                              final periode =
-                                  e.value['periode'] as String? ?? 'monthly';
-                              final alokasiInput =
-                                  (e.value['alokasiInput'] ??
+
+                              final alokasiBulanan =
+                                  (e.value['alokasiBulanan'] ??
                                           e.value['alokasi'] ??
                                           0)
                                       .toDouble();
 
                               final used = expenseBulanan(nama);
-                              final sisa = alokasiInput - used;
+                              final sisa = alokasiBulanan - used;
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
@@ -346,7 +345,7 @@ class BudgetScreen extends StatelessWidget {
                                   kategori: nama,
                                   index: e.key,
                                   amount:
-                                      '${formatK(sisa < 0 ? 0 : sisa)} / ${formatK(alokasiInput)} per ${periodSuffix(periode)}',
+                                      '${formatK(sisa < 0 ? 0 : sisa)} / ${formatK(alokasiBulanan)}',
                                 ),
                               );
                             }).toList(),

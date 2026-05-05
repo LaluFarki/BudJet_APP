@@ -9,20 +9,15 @@ import '../../../core/constants/app_colors.dart';
 import '../controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 
-// Formatter untuk titik pemisah ribuan (contoh: 1000 → 1.000)
 class _ThousandsSeparatorFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    // Hanya ambil angka
-    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll('.', '');
     if (digits.isEmpty) return newValue.copyWith(text: '');
-    
-    final parsed = int.tryParse(digits);
-    if (parsed == null) return newValue.copyWith(text: '');
-
-    final formatted =
-        NumberFormat('#,###', 'id_ID').format(parsed);
+    final formatted = NumberFormat('#,###', 'id_ID').format(int.parse(digits));
     return newValue.copyWith(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
@@ -32,19 +27,274 @@ class _ThousandsSeparatorFormatter extends TextInputFormatter {
 
 class AddTransactionScreen extends StatelessWidget {
   AddTransactionScreen({super.key}) {
-    // Load kategori dari Firestore (budget user)
     _loadCategories();
 
     final TransactionModel? existingTx = Get.arguments as TransactionModel?;
     if (existingTx != null) {
       _titleController.text = existingTx.title;
-      // Tampilkan angka dengan titik pemisah saat mode edit
-      final formatted = NumberFormat('#,###', 'id_ID')
-          .format(existingTx.amount.toInt());
-      _amountController.text = formatted;
+      _amountController.text = NumberFormat(
+        '#,###',
+        'id_ID',
+      ).format(existingTx.amount.toInt());
       _selectedCategory.value = existingTx.kategori;
       _selectedDate.value = existingTx.date;
+      _enteredAmount.value = existingTx.amount;
     }
+  }
+
+  final TransactionController txController = Get.find<TransactionController>();
+  final _formKey = GlobalKey<FormState>();
+
+  final _titleController = TextEditingController();
+  final _amountController = TextEditingController();
+
+  final RxString _selectedCategory = ''.obs;
+  final RxDouble _enteredAmount = 0.0.obs;
+  final Rx<DateTime> _selectedDate = DateTime.now().obs;
+  final RxBool _isLoading = false.obs;
+
+  final RxList<String> _categories = <String>[].obs;
+
+  final RxMap<String, Map<String, dynamic>> _categoryBudgetData =
+      <String, Map<String, dynamic>>{}.obs;
+
+  static const _defaultCategories = [
+    'Makanan & Minuman',
+    'Transportasi',
+    'Belanja',
+    'Hiburan',
+    'Lainnya',
+  ];
+
+  String _periodLabel(String periode) {
+    switch (periode) {
+      case 'daily':
+        return 'harian';
+      case 'weekly':
+        return 'mingguan';
+      case 'monthly':
+      default:
+        return 'bulanan';
+    }
+  }
+
+  bool _isSameCategory(String txCategory, String selectedCategory) {
+    final txLower = txCategory.toLowerCase();
+    final selectedLower = selectedCategory.toLowerCase();
+
+    if (txLower == selectedLower) return true;
+
+    final keywords = selectedLower.split(RegExp(r'[\s&]+'));
+    for (final keyword in keywords) {
+      if (keyword.length >= 3 && txLower.contains(keyword)) return true;
+    }
+
+    return false;
+  }
+
+  DateTime _startOfWeek(DateTime date) {
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+    ).subtract(Duration(days: date.weekday - 1));
+  }
+
+  double _usedByCategoryAndPeriod({
+    required String category,
+    required String period,
+    required DateTime selectedDate,
+  }) {
+    return txController.transactions
+        .where((tx) {
+          if (tx.type != 'expense') return false;
+          if (!_isSameCategory(tx.kategori, category)) return false;
+
+          if (period == 'daily') {
+            return tx.date.year == selectedDate.year &&
+                tx.date.month == selectedDate.month &&
+                tx.date.day == selectedDate.day;
+          }
+
+          if (period == 'weekly') {
+            final start = _startOfWeek(selectedDate);
+            final end = start.add(const Duration(days: 7));
+
+            return tx.date.isAtSameMomentAs(start) ||
+                (tx.date.isAfter(start) && tx.date.isBefore(end));
+          }
+
+          return tx.date.year == selectedDate.year &&
+              tx.date.month == selectedDate.month;
+        })
+        .fold(0.0, (sum, tx) => sum + tx.amount);
+  }
+
+  Future<void> _loadCategories() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) {
+      _categories.value = _defaultCategories.toList();
+      if (_selectedCategory.value.isEmpty) {
+        _selectedCategory.value = _categories.first;
+      }
+      return;
+    }
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+
+    if (doc.exists) {
+      final data = doc.data() ?? {};
+      final categoriesRaw = data['categories'] as List<dynamic>? ?? [];
+
+      if (categoriesRaw.isNotEmpty) {
+        final loadedCategories = <String>[];
+        final budgetMap = <String, Map<String, dynamic>>{};
+
+        for (final item in categoriesRaw) {
+          final map = item as Map<String, dynamic>;
+          final nama = map['nama'] as String? ?? '';
+
+          if (nama.isEmpty) continue;
+
+          final periode = map['periode'] as String? ?? 'monthly';
+          final alokasiBulanan = (map['alokasiBulanan'] ?? map['alokasi'] ?? 0)
+              .toDouble();
+          final alokasiInput = (map['alokasiInput'] ?? alokasiBulanan)
+              .toDouble();
+
+          loadedCategories.add(nama);
+          budgetMap[nama] = {
+            'periode': periode,
+            'alokasiInput': alokasiInput,
+            'alokasiBulanan': alokasiBulanan,
+          };
+        }
+
+        _categories.value = loadedCategories;
+        _categoryBudgetData.value = budgetMap;
+      }
+    }
+
+    if (_categories.isEmpty) {
+      _categories.value = _defaultCategories.toList();
+    }
+
+    if (_selectedCategory.value.isEmpty ||
+        !_categories.contains(_selectedCategory.value)) {
+      _selectedCategory.value = _categories.first;
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate.value,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+
+    if (picked != null && picked != _selectedDate.value) {
+      _selectedDate.value = picked;
+    }
+  }
+
+  Future<bool> _confirmOverPeriodBudget({
+    required String category,
+    required String periode,
+    required double budgetPeriode,
+    required double usedPeriode,
+    required double amount,
+  }) async {
+    final totalSetelahTransaksi = usedPeriode + amount;
+
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFF3CD),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.calendar_today_outlined,
+                color: Color(0xFFF59E0B),
+                size: 38,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Melewati Budget ${_periodLabel(periode)}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              usedPeriode > 0
+                  ? 'Total pengeluaran ${_periodLabel(periode)} untuk "$category" akan menjadi '
+                        '${AppHelpers.formatCurrency(totalSetelahTransaksi)}, melebihi budget '
+                        '${_periodLabel(periode)} sebesar ${AppHelpers.formatCurrency(budgetPeriode)}.\n\n'
+                        'Kamu sudah menghabiskan ${AppHelpers.formatCurrency(usedPeriode)} pada periode ini.'
+                  : 'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) melebihi budget '
+                        '${_periodLabel(periode)} kategori "$category" sebesar '
+                        '${AppHelpers.formatCurrency(budgetPeriode)}.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.blueGrey,
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Get.back(result: false),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.grey),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text(
+                    'Batalkan',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Get.back(result: true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF59E0B),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Tetap Lanjut'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    return confirmed == true;
   }
 
   void _showSuccessDialog(String message) {
@@ -90,8 +340,8 @@ class AddTransactionScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Get.back(); // close dialog
-                    Get.back(); // back to history
+                    Get.back();
+                    Get.back();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD4F069),
@@ -119,274 +369,137 @@ class AddTransactionScreen extends StatelessWidget {
     );
   }
 
-  final TransactionController txController = Get.find<TransactionController>();
-  final _formKey = GlobalKey<FormState>();
-
-  final _titleController = TextEditingController();
-  final _amountController = TextEditingController();
-  final RxString _selectedCategory = ''.obs;
-  final RxDouble _enteredAmount = 0.0.obs; // Jumlah yg sedang diketik
-  // Budget harian per kategori {namaKategori: budgetHarian}
-  final RxMap<String, double> _categoryDailyBudget = <String, double>{}.obs;
-
-  // Tanggal Picker
-  final Rx<DateTime> _selectedDate = DateTime.now().obs;
-
-  final RxBool _isLoading = false.obs;
-
-  // Kategori dinamis dari Firestore (budget user)
-  final RxList<String> _categories = <String>[].obs;
-
-  // Fallback jika belum ada data di Firestore
-  static const _defaultCategories = [
-    'Makanan & Minuman',
-    'Transportasi',
-    'Belanja',
-    'Hiburan',
-    'Lainnya',
-  ];
-
-  void _loadCategories() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      _categories.value = _defaultCategories.toList();
-      if (_selectedCategory.value.isEmpty) {
-        _selectedCategory.value = _categories.first;
-      }
-      return;
-    }
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .get();
-    if (doc.exists) {
-      final data = doc.data() ?? {};
-      final categoriesRaw = data['categories'] as List<dynamic>? ?? [];
-      if (categoriesRaw.isNotEmpty) {
-        _categories.value = categoriesRaw
-            .map((e) => (e as Map<String, dynamic>)['nama'] as String? ?? '')
-            .where((n) => n.isNotEmpty)
-            .toList();
-        // Ambil budget harian per kategori
-        final Map<String, double> dailyMap = {};
-        for (final e in categoriesRaw) {
-          final map = e as Map<String, dynamic>;
-          final nama = map['nama'] as String? ?? '';
-          final harian = (map['harian'] ?? 0).toDouble();
-          if (nama.isNotEmpty) dailyMap[nama] = harian;
-        }
-        _categoryDailyBudget.value = dailyMap;
-      }
-    }
-
-    // Fallback jika kosong
-    if (_categories.isEmpty) {
-      _categories.value = _defaultCategories.toList();
-    }
-
-    // Set default selected jika belum di-set (bukan mode edit)
-    if (_selectedCategory.value.isEmpty ||
-        !_categories.contains(_selectedCategory.value)) {
-      _selectedCategory.value = _categories.first;
-    }
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate.value,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(), // Batasi maksimal hari ini
-    );
-    if (picked != null && picked != _selectedDate.value) {
-      _selectedDate.value = picked;
-    }
-  }
-
   void _submit() async {
-    if (_formKey.currentState!.validate()) {
-      final TransactionModel? existingTx = Get.arguments as TransactionModel?;
-      final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
-      final amount = double.parse(cleanAmount.isEmpty ? '0' : cleanAmount);
+    if (!_formKey.currentState!.validate()) return;
 
-      // Cek saldo jika ini transaksi baru (bukan edit)
-      if (existingTx == null) {
-        final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
-        if (amount > sisaSaldo) {
-          Get.dialog(
-            AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFECEC),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.account_balance_wallet_outlined,
-                        color: Color(0xFFEC6A6A), size: 40),
+    final TransactionModel? existingTx = Get.arguments as TransactionModel?;
+    final cleanAmount = _amountController.text.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
+    final amount = double.parse(cleanAmount.isEmpty ? '0' : cleanAmount);
+
+    if (existingTx == null) {
+      final sisaSaldo =
+          txController.budgetBulanan.value - txController.totalExpense;
+
+      if (amount > sisaSaldo) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFECEC),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Saldo Tidak Cukup',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  child: const Icon(
+                    Icons.account_balance_wallet_outlined,
+                    color: Color(0xFFEC6A6A),
+                    size: 40,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sisa saldo kamu hanya ${AppHelpers.formatCurrency(sisaSaldo < 0 ? 0 : sisaSaldo)}, tidak cukup untuk transaksi ini.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.blueGrey, fontSize: 13),
-                  ),
-                ],
-              ),
-              actions: [
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Get.back(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEC6A6A),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Mengerti'),
-                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Saldo Tidak Cukup',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Sisa saldo kamu hanya ${AppHelpers.formatCurrency(sisaSaldo < 0 ? 0 : sisaSaldo)}, tidak cukup untuk transaksi ini.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.blueGrey, fontSize: 13),
                 ),
               ],
             ),
-          );
-          return;
-        }
-
-        // Cek budget harian kategori (kumulatif: total hari ini + transaksi baru)
-        final dailyBudget = _categoryDailyBudget[_selectedCategory.value] ?? 0;
-        if (dailyBudget > 0) {
-          final today = DateTime.now();
-          // Hitung total pengeluaran hari ini untuk kategori yang dipilih
-          final todaySpent = txController.transactions
-              .where((t) =>
-                  t.type == 'expense' &&
-                  t.kategori == _selectedCategory.value &&
-                  t.date.year == today.year &&
-                  t.date.month == today.month &&
-                  t.date.day == today.day)
-              .fold(0.0, (sum, t) => sum + t.amount);
-
-          final totalSetelahTransaksi = todaySpent + amount;
-
-          if (totalSetelahTransaksi > dailyBudget) {
-            // Tanya konfirmasi sebelum lanjut
-            final confirmed = await Get.dialog<bool>(
-              AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFF3CD),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.calendar_today_outlined,
-                          color: Color(0xFFF59E0B), size: 38),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEC6A6A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Melewati Budget Harian',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      todaySpent > 0
-                          ? 'Total pengeluaran hari ini untuk "${_selectedCategory.value}" '
-                            'akan menjadi ${AppHelpers.formatCurrency(totalSetelahTransaksi)}, '
-                            'melebihi budget harian sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
-                            'Kamu sudah menghabiskan ${AppHelpers.formatCurrency(todaySpent)} hari ini.'
-                          : 'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) '
-                            'melebihi budget harian kategori "${_selectedCategory.value}" '
-                            'sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
-                            'Melanjutkan dapat mengganggu rencana keuangan harianmu.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.blueGrey, fontSize: 13, height: 1.5),
-                    ),
-                  ],
-                ),
-                actions: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Get.back(result: false),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.grey),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text('Batalkan', style: TextStyle(color: Colors.grey)),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => Get.back(result: true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF59E0B),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text('Tetap Lanjut'),
-                        ),
-                      ),
-                    ],
                   ),
-                ],
+                  child: const Text('Mengerti'),
+                ),
               ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      final selectedData = _categoryBudgetData[_selectedCategory.value];
+
+      if (selectedData != null) {
+        final periode = selectedData['periode'] as String? ?? 'monthly';
+        final budgetPeriode = (selectedData['alokasiInput'] ?? 0).toDouble();
+
+        if (budgetPeriode > 0) {
+          final usedPeriode = _usedByCategoryAndPeriod(
+            category: _selectedCategory.value,
+            period: periode,
+            selectedDate: _selectedDate.value,
+          );
+
+          final totalSetelahTransaksi = usedPeriode + amount;
+
+          if (totalSetelahTransaksi > budgetPeriode + 1) {
+            final confirmed = await _confirmOverPeriodBudget(
+              category: _selectedCategory.value,
+              periode: periode,
+              budgetPeriode: budgetPeriode,
+              usedPeriode: usedPeriode,
+              amount: amount,
             );
-            if (confirmed != true) return; // User pilih Batalkan
+
+            if (!confirmed) return;
           }
         }
       }
+    }
 
-      _isLoading.value = true;
+    _isLoading.value = true;
 
-      final newTransaction = TransactionModel(
-        id: existingTx?.id ?? '',
-        amount: amount,
-        createdAt: existingTx?.createdAt ?? DateTime.now(),
-        date: _selectedDate.value,
-        kategori: _selectedCategory.value,
-        note: '', // Desain baru tidak ada note
-        title: _titleController.text,
-        type: existingTx?.type ?? 'expense', // Pertahankan tipe asli
-      );
+    final newTransaction = TransactionModel(
+      id: existingTx?.id ?? '',
+      amount: amount,
+      createdAt: existingTx?.createdAt ?? DateTime.now(),
+      date: _selectedDate.value,
+      kategori: _selectedCategory.value,
+      note: '',
+      title: _titleController.text,
+      type: existingTx?.type ?? 'expense',
+    );
 
-      if (existingTx != null) {
-        await txController.updateTransaction(existingTx, newTransaction);
-      } else {
-        await txController.addTransaction(newTransaction);
-      }
+    if (existingTx != null) {
+      await txController.updateTransaction(existingTx, newTransaction);
+    } else {
+      await txController.addTransaction(newTransaction);
+    }
 
-      _isLoading.value = false;
-      if (existingTx != null) {
-        _showSuccessDialog('Transaksi Berhasil Diperbarui');
-      } else {
-        // Pindah ke Success Screen kirim data
-        Get.offNamed('/success-tx', arguments: newTransaction);
-      }
+    _isLoading.value = false;
+
+    if (existingTx != null) {
+      _showSuccessDialog('Transaksi Berhasil Diperbarui');
+    } else {
+      Get.offNamed('/success-tx', arguments: newTransaction);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA), // Sangat light grey / off-white
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -408,7 +521,6 @@ class AddTransactionScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- Bagian Atas: Form bisa di-scroll ---
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -421,7 +533,6 @@ class AddTransactionScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // === Nama Pengeluaran ===
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -457,9 +568,9 @@ class AddTransactionScreen extends StatelessWidget {
                               val == null || val.isEmpty ? 'Isi judul' : null,
                         ),
                       ),
+
                       const SizedBox(height: 16),
 
-                      // === Nominal ===
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -480,19 +591,31 @@ class AddTransactionScreen extends StatelessWidget {
                             _ThousandsSeparatorFormatter(),
                           ],
                           onChanged: (val) {
-                            final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
+                            final digits = val.replaceAll(
+                              RegExp(r'[^0-9]'),
+                              '',
+                            );
                             double parsed = double.tryParse(digits) ?? 0;
-                            // Batasi input agar tidak melebihi sisa saldo
-                            final sisaSaldo = txController.budgetBulanan.value -
+
+                            final sisaSaldo =
+                                txController.budgetBulanan.value -
                                 txController.totalExpense;
+
                             if (sisaSaldo > 0 && parsed > sisaSaldo) {
                               parsed = sisaSaldo.floorToDouble();
-                              final capped = NumberFormat('#,###', 'id_ID')
-                                  .format(parsed.toInt());
+
+                              final capped = NumberFormat(
+                                '#,###',
+                                'id_ID',
+                              ).format(parsed.toInt());
+
                               _amountController.text = capped;
                               _amountController.selection =
-                                  TextSelection.collapsed(offset: capped.length);
+                                  TextSelection.collapsed(
+                                    offset: capped.length,
+                                  );
                             }
+
                             _enteredAmount.value = parsed;
                           },
                           decoration: const InputDecoration(
@@ -522,33 +645,39 @@ class AddTransactionScreen extends StatelessWidget {
                             if (val == null || val.isEmpty) {
                               return 'Isi nominal';
                             }
-                            if (val.contains(RegExp(r'[^0-9.]'))) {
-                              return 'Hanya menerima input angka';
-                            }
                             final cleanVal = val.replaceAll(
                               RegExp(r'[^0-9]'),
                               '',
                             );
+
                             if (double.tryParse(cleanVal) == null) {
                               return 'Angka tidak valid';
                             }
+
                             return null;
                           },
                         ),
                       ),
                       // Indikator sisa saldo real-time
-                      if (Get.arguments == null)
-                        Obx(() {
-                          final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
-                          final setelahTransaksi = sisaSaldo - _enteredAmount.value;
-                          final cukup = setelahTransaksi >= 0;
-                          if (_enteredAmount.value <= 0) return const SizedBox.shrink();
+                      Obx(() {
+                        final existingTx = Get.arguments as TransactionModel?;
+                        if (existingTx != null) return const SizedBox.shrink();
+                        final sisaSaldo =
+                            txController.budgetBulanan.value -
+                            txController.totalExpense;
+                        final setelahTransaksi =
+                            sisaSaldo - _enteredAmount.value;
+                        final cukup = setelahTransaksi >= 0;
+                        if (_enteredAmount.value <= 0)
+                          return const SizedBox.shrink();
                         return Padding(
                           padding: const EdgeInsets.only(top: 8, left: 4),
                           child: Row(
                             children: [
                               Icon(
-                                cukup ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+                                cukup
+                                    ? Icons.check_circle_outline
+                                    : Icons.warning_amber_rounded,
                                 size: 14,
                                 color: cukup ? Colors.green : Colors.red,
                               ),
@@ -567,9 +696,9 @@ class AddTransactionScreen extends StatelessWidget {
                           ),
                         );
                       }),
+
                       const SizedBox(height: 16),
 
-                      // === Kategori Dropdown ===
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -630,13 +759,15 @@ class AddTransactionScreen extends StatelessWidget {
                                         style: TextStyle(color: Colors.grey),
                                       );
                                     }
-                                    // Jika kategori lama (dari edit) tidak ada di list, tambahkan sementara
+
                                     final items = _categories.toList();
+
                                     if (!items.contains(
                                       _selectedCategory.value,
                                     )) {
                                       items.add(_selectedCategory.value);
                                     }
+
                                     return DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
                                         value: _selectedCategory.value,
@@ -671,6 +802,9 @@ class AddTransactionScreen extends StatelessWidget {
                                         ],
                                         onChanged: (val) {
                                           if (val == '__ADD_NEW__') {
+                                            final previousCategory =
+                                                _selectedCategory.value;
+
                                             Get.defaultDialog(
                                               title: 'Kategori Tidak Ada?',
                                               middleText:
@@ -684,10 +818,24 @@ class AddTransactionScreen extends StatelessWidget {
                                               cancelTextColor:
                                                   AppColors.textDark,
                                               onConfirm: () {
-                                                Get.back(); // Tutup dialog
+                                                Get.back();
+
+                                                _selectedCategory.value =
+                                                    previousCategory;
+
                                                 Get.toNamed(
                                                   '/edit-budget',
-                                                ); // Pindah ke halaman edit budget
+                                                )?.then((_) async {
+                                                  await _loadCategories();
+
+                                                  if (_categories.isNotEmpty &&
+                                                      !_categories.contains(
+                                                        _selectedCategory.value,
+                                                      )) {
+                                                    _selectedCategory.value =
+                                                        _categories.last;
+                                                  }
+                                                });
                                               },
                                             );
                                           } else if (val != null) {
@@ -703,9 +851,9 @@ class AddTransactionScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+
                       const SizedBox(height: 16),
 
-                      // === Tanggal ===
                       GestureDetector(
                         onTap: () => _selectDate(context),
                         child: Container(
@@ -757,6 +905,7 @@ class AddTransactionScreen extends StatelessWidget {
                                               DateTime.now().month &&
                                           _selectedDate.value.year ==
                                               DateTime.now().year;
+
                                       return Text(
                                         isToday
                                             ? 'Hari ini'
@@ -781,25 +930,19 @@ class AddTransactionScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 40), // Ruang lega ekstra
+
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
               ),
             ),
 
-            // --- Bagian Bawah: Tombol Tetap Terpisah ---
             Container(
-              padding: const EdgeInsets.fromLTRB(
-                24,
-                0,
-                24,
-                20,
-              ), // Padding bawah
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // === Teks Sudah Cocok? ===
                   Text(
                     Get.arguments != null
                         ? 'Simpan Perubahan?'
@@ -811,17 +954,13 @@ class AddTransactionScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // === Tombol Simpan ===
                   SizedBox(
                     width: double.infinity,
                     child: Obx(
                       () => ElevatedButton(
                         onPressed: _isLoading.value ? null : _submit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(
-                            0xFFDCE775,
-                          ), // Lime Green
+                          backgroundColor: const Color(0xFFDCE775),
                           foregroundColor: AppColors.textDark,
                           padding: const EdgeInsets.symmetric(vertical: 20),
                           shape: RoundedRectangleBorder(
