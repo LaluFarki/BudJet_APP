@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import 'package:budjet/features/algoritma_pembagian/smart_budget_engine.dart';
@@ -109,6 +110,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   }
 
   void _formatRupiah(TextEditingController controller, String value) {
+    // Hanya ambil angka
     final angka = value.replaceAll(RegExp(r'[^0-9]'), '');
     if (angka.isEmpty) {
       controller.clear();
@@ -403,9 +405,19 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                           ),
                           const SizedBox(height: 12),
 
-                          TextField(
+                          TextFormField(
                             controller: controllers[index],
                             keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            validator: (val) {
+                              if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
+                                return 'Hanya menerima input angka';
+                              }
+                              return null;
+                            },
                             onChanged: (value) =>
                                 _formatRupiah(controllers[index], value),
                             decoration: InputDecoration(

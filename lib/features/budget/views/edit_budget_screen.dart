@@ -2,6 +2,7 @@ import '../../transaction/controllers/transaction_controller.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
@@ -120,6 +121,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   }
 
   void _formatRupiah(TextEditingController controller, String value) {
+    // Hanya ambil angka
     final angka = value.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (angka.isEmpty) {
@@ -812,9 +814,19 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
           const SizedBox(height: 12),
 
-          TextField(
+          TextFormField(
             controller: _catControllers[i],
             keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            validator: (val) {
+              if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
+                return 'Hanya menerima input angka';
+              }
+              return null;
+            },
             onChanged: (val) => _formatRupiah(_catControllers[i], val),
             decoration: InputDecoration(
               hintText: 'Budget tersisa',
@@ -885,9 +897,19 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          TextField(
+                          TextFormField(
                             controller: _totalBudgetCtrl,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            validator: (val) {
+                              if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
+                                return 'Hanya menerima input angka';
+                              }
+                              return null;
+                            },
                             onChanged: (val) =>
                                 _formatRupiah(_totalBudgetCtrl, val),
                             style: const TextStyle(fontWeight: FontWeight.bold),

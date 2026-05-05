@@ -18,7 +18,6 @@ class _ThousandsSeparatorFormatter extends TextInputFormatter {
     final digits = newValue.text.replaceAll('.', '');
     if (digits.isEmpty) return newValue.copyWith(text: '');
     final formatted = NumberFormat('#,###', 'id_ID').format(int.parse(digits));
-
     return newValue.copyWith(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
@@ -587,7 +586,10 @@ class AddTransactionScreen extends StatelessWidget {
                         child: TextFormField(
                           controller: _amountController,
                           keyboardType: TextInputType.number,
-                          inputFormatters: [_ThousandsSeparatorFormatter()],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            _ThousandsSeparatorFormatter(),
+                          ],
                           onChanged: (val) {
                             final digits = val.replaceAll(
                               RegExp(r'[^0-9]'),
@@ -643,7 +645,6 @@ class AddTransactionScreen extends StatelessWidget {
                             if (val == null || val.isEmpty) {
                               return 'Isi nominal';
                             }
-
                             final cleanVal = val.replaceAll(
                               RegExp(r'[^0-9]'),
                               '',
@@ -657,22 +658,18 @@ class AddTransactionScreen extends StatelessWidget {
                           },
                         ),
                       ),
-
+                      // Indikator sisa saldo real-time
                       Obx(() {
                         final existingTx = Get.arguments as TransactionModel?;
                         if (existingTx != null) return const SizedBox.shrink();
-
                         final sisaSaldo =
                             txController.budgetBulanan.value -
                             txController.totalExpense;
                         final setelahTransaksi =
                             sisaSaldo - _enteredAmount.value;
                         final cukup = setelahTransaksi >= 0;
-
-                        if (_enteredAmount.value <= 0) {
+                        if (_enteredAmount.value <= 0)
                           return const SizedBox.shrink();
-                        }
-
                         return Padding(
                           padding: const EdgeInsets.only(top: 8, left: 4),
                           child: Row(

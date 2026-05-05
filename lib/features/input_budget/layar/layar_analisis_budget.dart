@@ -362,14 +362,18 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E1E1E),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E1E1E),
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
+        const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
@@ -444,6 +448,7 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
               fontWeight: FontWeight.w500,
               color: Color(0xFF1E1E1E),
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         Text(
