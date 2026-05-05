@@ -49,6 +49,13 @@ class ExpenseSummary extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Obx(() {
+                      if(!Get.isRegistered<TransactionController>()){
+                        return const Text('Rp 0', style: TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ));
+                      }
                       final txCtrl = Get.find<TransactionController>();
                       return Text(
                         AppHelpers.formatCurrency(txCtrl.todayExpense),
@@ -87,6 +94,14 @@ class ExpenseSummary extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Obx(() {
+                      if(!Get.isRegistered<TransactionController>()){
+                        return const Text('Rp 0', style: TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ));
+                      }
+
                       final txCtrl = Get.find<TransactionController>();
                       return Text(
                         AppHelpers.formatCurrency(txCtrl.totalExpense),

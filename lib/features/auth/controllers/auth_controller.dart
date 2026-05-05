@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../routes/app_routes.dart';
+import '../../transaction/controllers/transaction_controller.dart';
+
 
 class AuthController extends GetxController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -34,7 +36,7 @@ class AuthController extends GetxController {
 
       // Simpan data pengguna ke Firestore
       if (userCredential.user != null) {
-        await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        await _firestore.collection('users').doc(userCredential.user?.uid).set({
           'name': 'Pengguna Baru', // Nama default, nanti bisa diubah user
           'email': email,
           'profilePic': '',
@@ -136,6 +138,9 @@ class AuthController extends GetxController {
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {}
+
+    Get.delete<TransactionController>(force: true);
+
     Get.offAllNamed(AppRoutes.login);
   }
 

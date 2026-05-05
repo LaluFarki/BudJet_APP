@@ -264,8 +264,10 @@ class CategoryListWidget extends StatelessWidget {
   void _showCategoryPopup(
     BuildContext context, {
     required Map<String, dynamic> cat,
-    required NumberFormat currencyFmt,
+    required NumberFormat currencyFmt,  
   }) {
+
+    
     final txCtrl = Get.find<TransactionController>();
     final nama = cat['nama'] as String? ?? '';
     final alokasi = (cat['alokasi'] ?? 0).toDouble();
