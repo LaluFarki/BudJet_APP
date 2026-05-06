@@ -19,6 +19,10 @@ class VoiceTransactionController extends GetxController {
   // Hasil ekstraksi data
   var detectedTx = Rxn<TransactionModel>();
 
+  // State untuk Dual Mode (Tap & Hold)
+  DateTime? _tapDownTime;
+  bool _isRecordingByTap = false;
+
   // Reactive List untuk menampung kategori user
   final RxList<String> userCategories = <String>[].obs;
 
@@ -193,6 +197,40 @@ class VoiceTransactionController extends GetxController {
     isProcessing.value = false;
   }
 
+  void handleMicTapDown() {
+    _tapDownTime = DateTime.now();
+    if (!isListening.value) {
+      startListening();
+      _isRecordingByTap = false;
+    } else {
+      // Jika sudah mendengarkan (berarti sedang dalam mode tap), matikan
+      stopAndProcess();
+      _isRecordingByTap = false;
+    }
+  }
+
+  void handleMicTapUp() {
+    if (_tapDownTime != null) {
+      final duration = DateTime.now().difference(_tapDownTime!);
+      if (duration.inMilliseconds < 300) {
+        // Tapping singkat -> Biarkan merekam (mode tap)
+        _isRecordingByTap = true;
+      } else {
+        // Tekan lama -> Berhenti saat dilepas (mode hold)
+        stopAndProcess();
+        _isRecordingByTap = false;
+      }
+    }
+    _tapDownTime = null;
+  }
+
+  void handleMicTapCancel() {
+    if (!_isRecordingByTap) {
+      stopAndProcess();
+    }
+    _tapDownTime = null;
+  }
+
   Map<String, dynamic> _extractDateFromText(String text) {
     DateTime detectedDate = DateTime.now();
     String exactDateString = "";
@@ -324,7 +362,9 @@ class VoiceTransactionController extends GetxController {
 
     // Format output teks di layar agar memperlihatkan tanggal yang dideteksi
     String formattedDate = DateFormat('dd MMM yyyy').format(detectedDate);
-    transcription.value = "$title untuk $detectedCat sebesar Rp${detectedAmount.toInt()} pada $formattedDate";    
+    final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    String formattedAmount = currencyFormatter.format(detectedAmount);
+    transcription.value = "$title untuk $detectedCat sebesar $formattedAmount pada $formattedDate";    
   }
 
   void reset() {
