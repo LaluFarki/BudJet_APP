@@ -28,8 +28,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 color: Color(0xFFE8F5E9),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.mark_email_read_outlined,
-                  color: Color(0xFF4CAF50), size: 42),
+              child: const Icon(
+                Icons.mark_email_read_outlined,
+                color: Color(0xFF4CAF50),
+                size: 42,
+              ),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -55,14 +58,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.tips_and_updates_outlined,
-                          color: Color(0xFFF9A825), size: 16),
+                      Icon(
+                        Icons.tips_and_updates_outlined,
+                        color: Color(0xFFF9A825),
+                        size: 16,
+                      ),
                       SizedBox(width: 6),
-                      Text('Email tidak ditemukan?',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: Color(0xFFF9A825))),
+                      Text(
+                        'Email tidak ditemukan?',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFFF9A825),
+                        ),
+                      ),
                     ],
                   ),
                   SizedBox(height: 6),
@@ -71,7 +80,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     '• Cek folder Promosi atau Update\n'
                     '• Pastikan email yang dimasukkan benar\n'
                     '• Tunggu beberapa menit lalu cek kembali',
-                    style: TextStyle(fontSize: 11, color: Colors.brown, height: 1.6),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.brown,
+                      height: 1.6,
+                    ),
                   ),
                 ],
               ),
@@ -88,12 +101,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   backgroundColor: const Color(0xFFC8E669),
                   foregroundColor: Colors.black,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   elevation: 0,
                 ),
-                child: const Text('Kembali ke Login',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Kembali ke Login',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
@@ -123,16 +139,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       child: Image.asset(
                         'assets/icon/app_icon.png',
                         height: 50,
-                        errorBuilder: (context, error, stackTrace) => const Text(
-                          'BudJet',
-                          style: TextStyle(color: Color(0xFFC8E669), fontSize: 32, fontWeight: FontWeight.bold),
-                        ),
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Text(
+                              'BudJet',
+                              style: TextStyle(
+                                color: Color(0xFFC8E669),
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                       ),
                     ),
                     const SizedBox(height: 40),
                     const Text(
                       'Lupa Kata Sandi?',
-                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     const Text(
@@ -143,12 +168,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
             ),
-            
+
             // Form Container
             Expanded(
               flex: 6,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 24.0,
+                ),
                 decoration: const BoxDecoration(
                   color: Color(0xFFF7F8FA),
                   borderRadius: BorderRadius.only(
@@ -162,20 +190,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.black87,
+                          ),
                           onPressed: () => Get.back(),
                         ),
                         const SizedBox(width: 8),
                         const Text(
                           'Lupa Kata Sandi',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 24),
                     const Text(
                       'Email',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -184,38 +222,81 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       autofillHints: const [AutofillHints.email],
                       decoration: InputDecoration(
                         hintText: 'Masukkan email anda',
-                        prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
+                        prefixIcon: const Icon(
+                          Icons.email_outlined,
+                          color: Colors.grey,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFC8E669))),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFC8E669),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 30),
-                    Obx(() => ElevatedButton(
-                      onPressed: _authController.isLoading.value
-                          ? null
-                          : () {
-                              if (_emailController.text.isNotEmpty) {
-                                _authController.sendPasswordResetEmail(
-                                  _emailController.text,
-                                  onSuccess: () => _showEmailSentDialog(_emailController.text),
-                                );
-                              } else {
-                                Get.snackbar('Peringatan', 'Harap masukkan email Anda');
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFC8E669),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    Obx(
+                      () => ElevatedButton(
+                        onPressed: _authController.isLoading.value
+                            ? null
+                            : () {
+                                if (_emailController.text.isNotEmpty) {
+                                  _authController.sendPasswordResetEmail(
+                                    _emailController.text,
+                                    onSuccess: () => _showEmailSentDialog(
+                                      _emailController.text,
+                                    ),
+                                  );
+                                } else {
+                                  Get.snackbar(
+                                    'Peringatan',
+                                    'Harap masukkan email Anda',
+                                    snackPosition: SnackPosition.TOP,
+                                    margin: const EdgeInsets.only(
+                                      top: 40,
+                                      left: 16,
+                                      right: 16,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 20,
+                                    ),
+                                  );
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFC8E669),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _authController.isLoading.value
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(),
+                              )
+                            : const Text(
+                                'Kirim Tautan Atur Ulang →',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
-                      child: _authController.isLoading.value
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
-                          : const Text('Kirim Tautan Atur Ulang →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    )),
+                    ),
                   ],
                 ),
               ),

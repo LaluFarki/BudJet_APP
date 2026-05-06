@@ -61,7 +61,10 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
       }
     } catch (e) {
       Get.snackbar('Gagal', 'Tidak dapat membuka galeri: $e',
-          snackPosition: SnackPosition.BOTTOM);
+          snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
     }
   }
 
@@ -71,8 +74,10 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
       Get.snackbar(
         'Pilih Foto Profil',
         'Silakan pilih avatar atau foto dari galeri!',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.orange.shade100,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
       return;
     }
@@ -126,7 +131,10 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
       Get.off(() => const LayarFormAnggaran());
     } catch (e) {
       Get.snackbar('Gagal', 'Terjadi kesalahan: $e',
-          snackPosition: SnackPosition.BOTTOM);
+          snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

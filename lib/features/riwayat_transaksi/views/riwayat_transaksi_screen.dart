@@ -375,13 +375,14 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                       Get.snackbar(
                         'Berhasil',
                         'Transaksi berhasil dihapus',
-                        snackPosition: SnackPosition.BOTTOM,
+                        snackPosition: SnackPosition.TOP,
                         backgroundColor: const Color(0xFF4CAF50),
                         colorText: Colors.white,
-                        margin: const EdgeInsets.all(16),
                         borderRadius: 12,
                         duration: const Duration(seconds: 2),
-                      );
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
                     },
                   );
                 },

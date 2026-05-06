@@ -26,20 +26,103 @@ class _ThousandsSeparatorFormatter extends TextInputFormatter {
 }
 
 class AddTransactionScreen extends StatelessWidget {
-  AddTransactionScreen({super.key}) {
+  // Load kategori dari Firestore (budget user)
+  final bool isVoiceDraft;
+  final TransactionModel? existingTx;
+
+  AddTransactionScreen({super.key})
+      : isVoiceDraft = Get.arguments is Map && (Get.arguments as Map)['isVoiceDraft'] == true,
+        existingTx = Get.arguments is TransactionModel ? Get.arguments as TransactionModel : null {
     _loadCategories();
 
-    final TransactionModel? existingTx = Get.arguments as TransactionModel?;
-    if (existingTx != null) {
-      _titleController.text = existingTx.title;
-      _amountController.text = NumberFormat(
-        '#,###',
-        'id_ID',
-      ).format(existingTx.amount.toInt());
-      _selectedCategory.value = existingTx.kategori;
-      _selectedDate.value = existingTx.date;
-      _enteredAmount.value = existingTx.amount;
+    // Persiapkan model mana yang akan dipakai untuk mengisi Field form
+    TransactionModel? draftToFill;
+
+    if (isVoiceDraft) {
+      draftToFill = (Get.arguments as Map)['draftTx'] as TransactionModel;
+    } else if (existingTx != null) {
+      draftToFill = existingTx;
     }
+
+    // Jika ada data (dari Edit atau Voice Draft), isi controller form secara otomatis
+    if (draftToFill != null) {
+      _titleController.text = draftToFill.title;
+      _amountController.text = NumberFormat('#,###', 'id_ID').format(draftToFill.amount.toInt());
+      _selectedCategory.value = draftToFill.kategori;
+      _selectedDate.value = draftToFill.date;
+    }
+  }
+
+  void _showSuccessDialog(String message) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4F069),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFD4F069).withValues(alpha: 0.4),
+                      blurRadius: 25,
+                      spreadRadius: 5,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 45),
+              ),
+              const SizedBox(height: 32),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Get.back(); // close dialog
+                    Get.back(); // back to history
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD4F069),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text(
+                    'Kembali',
+                    style: TextStyle(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
   }
 
   final TransactionController txController = Get.find<TransactionController>();
@@ -57,6 +140,8 @@ class AddTransactionScreen extends StatelessWidget {
 
   final RxMap<String, Map<String, dynamic>> _categoryBudgetData =
       <String, Map<String, dynamic>>{}.obs;
+
+  final RxMap<String, double> _categoryDailyBudget = <String, double>{}.obs;
 
   static const _defaultCategories = [
     'Makanan & Minuman',
@@ -153,6 +238,7 @@ class AddTransactionScreen extends StatelessWidget {
       if (categoriesRaw.isNotEmpty) {
         final loadedCategories = <String>[];
         final budgetMap = <String, Map<String, dynamic>>{};
+        final dailyBudgetMap = <String, double>{};
 
         for (final item in categoriesRaw) {
           final map = item as Map<String, dynamic>;
@@ -172,10 +258,19 @@ class AddTransactionScreen extends StatelessWidget {
             'alokasiInput': alokasiInput,
             'alokasiBulanan': alokasiBulanan,
           };
+
+          if (periode == 'daily') {
+            dailyBudgetMap[nama] = alokasiInput;
+          } else if (periode == 'weekly') {
+            dailyBudgetMap[nama] = alokasiInput / 7;
+          } else {
+            dailyBudgetMap[nama] = alokasiInput / 30;
+          }
         }
 
         _categories.value = loadedCategories;
         _categoryBudgetData.value = budgetMap;
+        _categoryDailyBudget.value = dailyBudgetMap;
       }
     }
 
@@ -202,271 +297,156 @@ class AddTransactionScreen extends StatelessWidget {
     }
   }
 
-  Future<bool> _confirmOverPeriodBudget({
-    required String category,
-    required String periode,
-    required double budgetPeriode,
-    required double usedPeriode,
-    required double amount,
-  }) async {
-    final totalSetelahTransaksi = usedPeriode + amount;
-
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFF3CD),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.calendar_today_outlined,
-                color: Color(0xFFF59E0B),
-                size: 38,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Melewati Budget ${_periodLabel(periode)}',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              usedPeriode > 0
-                  ? 'Total pengeluaran ${_periodLabel(periode)} untuk "$category" akan menjadi '
-                        '${AppHelpers.formatCurrency(totalSetelahTransaksi)}, melebihi budget '
-                        '${_periodLabel(periode)} sebesar ${AppHelpers.formatCurrency(budgetPeriode)}.\n\n'
-                        'Kamu sudah menghabiskan ${AppHelpers.formatCurrency(usedPeriode)} pada periode ini.'
-                  : 'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) melebihi budget '
-                        '${_periodLabel(periode)} kategori "$category" sebesar '
-                        '${AppHelpers.formatCurrency(budgetPeriode)}.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.blueGrey,
-                fontSize: 13,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Get.back(result: false),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.grey),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: const Text(
-                    'Batalkan',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Get.back(result: true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF59E0B),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: const Text('Tetap Lanjut'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-
-    return confirmed == true;
-  }
-
-  void _showSuccessDialog(String message) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD4F069),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFD4F069).withValues(alpha: 0.4),
-                      blurRadius: 25,
-                      spreadRadius: 5,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.check, color: Colors.white, size: 45),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Get.back();
-                    Get.back();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD4F069),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text(
-                    'Kembali',
-                    style: TextStyle(
-                      color: AppColors.textDark,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: false,
-    );
-  }
-
   void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (_formKey.currentState!.validate()) {
+      // final TransactionModel? existingTx = Get.arguments as TransactionModel?;
+      final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      final amount = double.parse(cleanAmount.isEmpty ? '0' : cleanAmount);
 
-    final TransactionModel? existingTx = Get.arguments as TransactionModel?;
-    final cleanAmount = _amountController.text.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
-    final amount = double.parse(cleanAmount.isEmpty ? '0' : cleanAmount);
-
-    if (existingTx == null) {
-      final sisaSaldo =
-          txController.budgetBulanan.value - txController.totalExpense;
-
-      if (amount > sisaSaldo) {
-        Get.dialog(
-          AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFECEC),
-                    shape: BoxShape.circle,
+      // Cek saldo jika ini transaksi baru (bukan edit)
+      if (existingTx == null) {
+        final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
+        if (amount > sisaSaldo) {
+          Get.dialog(
+            AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFECEC),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.account_balance_wallet_outlined,
+                        color: Color(0xFFEC6A6A), size: 40),
                   ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_outlined,
-                    color: Color(0xFFEC6A6A),
-                    size: 40,
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Saldo Tidak Cukup',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Saldo Tidak Cukup',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Sisa saldo kamu hanya ${AppHelpers.formatCurrency(sisaSaldo < 0 ? 0 : sisaSaldo)}, tidak cukup untuk transaksi ini.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.blueGrey, fontSize: 13),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sisa saldo kamu hanya ${AppHelpers.formatCurrency(sisaSaldo < 0 ? 0 : sisaSaldo)}, tidak cukup untuk transaksi ini.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.blueGrey, fontSize: 13),
+                  ),
+                ],
+              ),
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Get.back(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEC6A6A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Mengerti'),
+                  ),
                 ),
               ],
             ),
-            actions: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Get.back(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEC6A6A),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Mengerti'),
-                ),
-              ),
-            ],
-          ),
-        );
-        return;
-      }
-
-      final selectedData = _categoryBudgetData[_selectedCategory.value];
-
-      if (selectedData != null) {
-        final periode = selectedData['periode'] as String? ?? 'monthly';
-        final budgetPeriode = (selectedData['alokasiInput'] ?? 0).toDouble();
-
-        if (budgetPeriode > 0) {
-          final usedPeriode = _usedByCategoryAndPeriod(
-            category: _selectedCategory.value,
-            period: periode,
-            selectedDate: _selectedDate.value,
           );
+          return;
+        }
 
-          final totalSetelahTransaksi = usedPeriode + amount;
+        // Cek budget harian kategori (kumulatif: total hari ini + transaksi baru)
+        final dailyBudget = _categoryDailyBudget[_selectedCategory.value] ?? 0;
+        if (dailyBudget > 0) {
+          final today = DateTime.now();
+          // Hitung total pengeluaran hari ini untuk kategori yang dipilih
+          final todaySpent = txController.transactions
+              .where((t) =>
+                  t.type == 'expense' &&
+                  t.kategori == _selectedCategory.value &&
+                  t.date.year == today.year &&
+                  t.date.month == today.month &&
+                  t.date.day == today.day)
+              .fold(0.0, (sum, t) => sum + t.amount);
 
-          if (totalSetelahTransaksi > budgetPeriode + 1) {
-            final confirmed = await _confirmOverPeriodBudget(
-              category: _selectedCategory.value,
-              periode: periode,
-              budgetPeriode: budgetPeriode,
-              usedPeriode: usedPeriode,
-              amount: amount,
+          final totalSetelahTransaksi = todaySpent + amount;
+
+          if (totalSetelahTransaksi > dailyBudget) {
+            // Tanya konfirmasi sebelum lanjut
+            final confirmed = await Get.dialog<bool>(
+              AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFF3CD),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.calendar_today_outlined,
+                          color: Color(0xFFF59E0B), size: 38),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Melewati Budget Harian',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      todaySpent > 0
+                          ? 'Total pengeluaran hari ini untuk "${_selectedCategory.value}" '
+                            'akan menjadi ${AppHelpers.formatCurrency(totalSetelahTransaksi)}, '
+                            'melebihi budget harian sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
+                            'Kamu sudah menghabiskan ${AppHelpers.formatCurrency(todaySpent)} hari ini.'
+                          : 'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) '
+                            'melebihi budget harian kategori "${_selectedCategory.value}" '
+                            'sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
+                            'Melanjutkan dapat mengganggu rencana keuangan harianmu.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.blueGrey, fontSize: 13, height: 1.5),
+                    ),
+                  ],
+                ),
+                actions: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Get.back(result: false),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.grey),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Batalkan', style: TextStyle(color: Colors.grey)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Get.back(result: true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF59E0B),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Tetap Lanjut'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             );
-
-            if (!confirmed) return;
+            if (confirmed != true) return; // User pilih Batalkan
           }
         }
       }
-    }
 
     _isLoading.value = true;
 
@@ -481,11 +461,11 @@ class AddTransactionScreen extends StatelessWidget {
       type: existingTx?.type ?? 'expense',
     );
 
-    if (existingTx != null) {
-      await txController.updateTransaction(existingTx, newTransaction);
-    } else {
-      await txController.addTransaction(newTransaction);
-    }
+      if (existingTx != null) {
+        await txController.updateTransaction(existingTx!, newTransaction);
+      } else {
+        await txController.addTransaction(newTransaction);
+      }
 
     _isLoading.value = false;
 
@@ -494,6 +474,7 @@ class AddTransactionScreen extends StatelessWidget {
     } else {
       Get.offNamed('/success-tx', arguments: newTransaction);
     }
+  }
   }
 
   @override
@@ -508,7 +489,7 @@ class AddTransactionScreen extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          Get.arguments != null ? 'Edit Transaksi' : 'Tambah Transaksi',
+          existingTx != null ? 'Edit Transaksi' : 'Tambah Transaksi',
           style: const TextStyle(
             color: AppColors.textDark,
             fontWeight: FontWeight.bold,
@@ -659,43 +640,42 @@ class AddTransactionScreen extends StatelessWidget {
                         ),
                       ),
                       // Indikator sisa saldo real-time
-                      Obx(() {
-                        final existingTx = Get.arguments as TransactionModel?;
-                        if (existingTx != null) return const SizedBox.shrink();
-                        final sisaSaldo =
-                            txController.budgetBulanan.value -
-                            txController.totalExpense;
-                        final setelahTransaksi =
-                            sisaSaldo - _enteredAmount.value;
-                        final cukup = setelahTransaksi >= 0;
-                        if (_enteredAmount.value <= 0)
-                          return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8, left: 4),
-                          child: Row(
-                            children: [
-                              Icon(
-                                cukup
-                                    ? Icons.check_circle_outline
-                                    : Icons.warning_amber_rounded,
-                                size: 14,
-                                color: cukup ? Colors.green : Colors.red,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                cukup
-                                    ? 'Sisa saldo: ${AppHelpers.formatCurrency(setelahTransaksi)}'
-                                    : 'Saldo tidak cukup! Kurang ${AppHelpers.formatCurrency(-setelahTransaksi)}',
-                                style: TextStyle(
-                                  fontSize: 12,
+                      if (existingTx == null)
+                        Obx(() {
+                          final sisaSaldo = txController.budgetBulanan.value -
+                              txController.totalExpense;
+                          final setelahTransaksi =
+                              sisaSaldo - _enteredAmount.value;
+                          final cukup = setelahTransaksi >= 0;
+                          if (_enteredAmount.value <= 0) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8, left: 4),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  cukup
+                                      ? Icons.check_circle_outline
+                                      : Icons.warning_amber_rounded,
+                                  size: 14,
                                   color: cukup ? Colors.green : Colors.red,
-                                  fontWeight: FontWeight.w500,
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
+                                const SizedBox(width: 4),
+                                Text(
+                                  cukup
+                                      ? 'Sisa saldo: ${AppHelpers.formatCurrency(setelahTransaksi)}'
+                                      : 'Saldo tidak cukup! Kurang ${AppHelpers.formatCurrency(-setelahTransaksi)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: cukup ? Colors.green : Colors.red,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
 
                       const SizedBox(height: 16),
 
@@ -944,7 +924,7 @@ class AddTransactionScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    Get.arguments != null
+                    existingTx != null
                         ? 'Simpan Perubahan?'
                         : 'Sudah Cocok?',
                     style: const TextStyle(

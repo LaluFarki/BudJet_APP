@@ -111,15 +111,7 @@ class _MainScreenState extends State<MainScreen>
                       icon: Icons.graphic_eq_rounded,
                       onTap: () {
                         _closeFab();
-                        Get.snackbar(
-                          'Voice Note',
-                          'Fitur voice note segera hadir!',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: const Color(0xFFDCE775),
-                          colorText: AppColors.textDark,
-                          margin: const EdgeInsets.all(16),
-                          borderRadius: 12,
-                        );
+                        Get.toNamed('/voice-tx');
                       },
                     ),
                     const SizedBox(width: 40), // Spacing between the buttons

@@ -48,9 +48,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
+        child: SingleChildScrollView(
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom - kToolbarHeight,
+            child: Column(
+              children: [
+                Expanded(
               flex: 2,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -241,6 +244,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

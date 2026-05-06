@@ -187,9 +187,10 @@ class DataDiriScreen extends StatelessWidget {
                             Get.snackbar(
                               'Error',
                               '$title tidak boleh kosong',
-                              snackPosition: SnackPosition.BOTTOM,
-                              margin: const EdgeInsets.all(12),
-                            );
+                              snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
                           }
                         },
                         style: ElevatedButton.styleFrom(
