@@ -85,9 +85,9 @@ class VoiceTransactionScreen extends StatelessWidget {
                           
                           // --- Bagian Tombol Mic & Wave ---
                           Obx(() => GestureDetector(
-                            onTapDown: (_) => controller.startListening(),
-                            onTapUp: (_) => controller.stopAndProcess(),
-                            onTapCancel: () => controller.stopAndProcess(), 
+                            onTapDown: (_) => controller.handleMicTapDown(),
+                            onTapUp: (_) => controller.handleMicTapUp(),
+                            onTapCancel: () => controller.handleMicTapCancel(), 
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
