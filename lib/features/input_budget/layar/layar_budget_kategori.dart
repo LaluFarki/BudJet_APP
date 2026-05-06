@@ -52,7 +52,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
       final nominal = _parseRupiah(controllers[i].text);
       final period = _periodFromString(periodeList[i]);
 
-      total += _engine.convertToMonthly(nominal, period);
+      total += nominal;
     }
 
     return total;
@@ -206,26 +206,24 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     );
   }
 
-  String _getPreviewBulanan(double nominal, String periode) {
-    int multiplier = 1;
+  String _getPreviewPeriode(double nominalBulanan, String periode) {
+    if (nominalBulanan == 0) return '';
 
     switch (periode) {
       case 'Harian':
-        multiplier = 30;
-        break;
+        final harian = nominalBulanan / 30;
+        return 'Estimasi penggunaan = ${_currencyFormat.format(harian.toInt())} / hari';
+
       case 'Mingguan':
-        multiplier = 4;
-        break;
+        final mingguan = nominalBulanan / 4;
+        return 'Estimasi penggunaan = ${_currencyFormat.format(mingguan.toInt())} / minggu';
+
       case 'Bulanan':
-        multiplier = 1;
-        break;
+        return 'Digunakan sebagai ${_currencyFormat.format(nominalBulanan.toInt())} / bulan';
+
+      default:
+        return '';
     }
-
-    final total = nominal * multiplier;
-
-    if (nominal == 0) return '';
-
-    return 'Alokasi 1 bulan = ${_currencyFormat.format(nominal.toInt())} × $multiplier = ${_currencyFormat.format(total.toInt())}';
   }
 
   void _showValidationPopup() {
@@ -405,61 +403,61 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                           ),
                           const SizedBox(height: 12),
 
-                          TextFormField(
-                            controller: controllers[index],
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
-                            validator: (val) {
-                              if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
-                                return 'Hanya menerima input angka';
-                              }
-                              return null;
-                            },
-                            onChanged: (value) =>
-                                _formatRupiah(controllers[index], value),
-                            decoration: InputDecoration(
-                              hintText:
-                                  'Nominal per ${periodeList[index].toLowerCase()}',
-                              helperText:
-                                  'Jatah ${kategori.toLowerCase()} per ${periodeList[index].toLowerCase()}',
-                              helperStyle: const TextStyle(fontSize: 12),
-                              filled: true,
-                              fillColor: const Color(0xFFF1F3F6),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAEF),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFD6E85A),
+                              ),
+                            ),
+                            child: Text(
+                              'Masukkan nominal kategori ${kategori.toLowerCase()} untuk 1 bulan.\n'
+                              'Pilih periode penggunaan budget kategori ini.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 1.5,
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
 
-                          // 👇 TAMBAHKAN DI SINI
-                          Builder(
-                            builder: (_) {
-                              final nominal = _parseRupiah(
-                                controllers[index].text,
-                              );
-                              final preview = _getPreviewBulanan(
-                                nominal,
-                                periodeList[index],
-                              );
+                          TextFormField(
+                            controller: controllers[index],
+                            keyboardType: TextInputType.number,
+                            onChanged: (value) =>
+                                _formatRupiah(controllers[index], value),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: const Color(0xFFF1F3F6),
 
-                              if (preview.isEmpty) return const SizedBox();
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 16,
+                              ),
 
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  preview,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade700,
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFD6E85A),
+                                  width: 1.5,
                                 ),
-                              );
-                            },
+                              ),
+                            ),
                           ),
 
                           const SizedBox(height: 12),
@@ -509,6 +507,43 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                                 );
                               }).toList(),
                             ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          Builder(
+                            builder: (_) {
+                              final nominal = _parseRupiah(
+                                controllers[index].text,
+                              );
+
+                              final preview = _getPreviewPeriode(
+                                nominal,
+                                periodeList[index],
+                              );
+
+                              if (preview.isEmpty) return const SizedBox();
+
+                              return Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5F7FA),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  preview,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
