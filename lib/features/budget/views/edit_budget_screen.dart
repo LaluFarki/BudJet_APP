@@ -235,19 +235,49 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   void _handleBack() {
     Get.defaultDialog(
       title: 'Yakin ingin kembali?',
+      titleStyle: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: AppColors.textDark,
+      ),
       middleText: _hasChanged
           ? 'Perubahan Anda belum disimpan.'
           : 'Anda belum melakukan perubahan apapun.',
-      textConfirm: 'Ya, Kembali',
-      textCancel: 'Batal',
-      confirmTextColor: Colors.white,
-      buttonColor: const Color(0xFFDCE775),
-      cancelTextColor: AppColors.textDark,
-      onConfirm: () {
-        Get.back();
-        setState(() => _canPopNow = true);
-        Get.back();
-      },
+      middleTextStyle: const TextStyle(
+        fontSize: 14,
+        color: AppColors.textGrey,
+      ),
+      radius: 20,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      cancel: OutlinedButton(
+        onPressed: () => Get.back(),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.grey[700],
+          side: BorderSide(color: Colors.grey[300]!),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        ),
+        child: const Text('Batal'),
+      ),
+      confirm: ElevatedButton(
+        onPressed: () {
+          Get.back();
+          setState(() => _canPopNow = true);
+          Get.back();
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF66BB6A), // Vibrant Green
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        ),
+        child: const Text('Ya, Kembali'),
+      ),
     );
   }
 

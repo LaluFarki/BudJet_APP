@@ -20,6 +20,9 @@ class TransactionController extends GetxController {
 
   // State untuk show/hide saldo
   var isBalanceVisible = true.obs;
+  
+  // State untuk categories dari Firestore (sinkron dengan budget)
+  var userCategories = <String>[].obs;
 
   late CollectionReference _txnCollection;
   late DocumentReference _userDoc;
@@ -54,6 +57,12 @@ class TransactionController extends GetxController {
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>? ?? {};
         budgetBulanan.value = (data['budgetBulanan'] ?? 0).toDouble();
+        
+        final catsRaw = data['categories'] as List? ?? [];
+        userCategories.value = catsRaw
+            .map((c) => (c['nama'] ?? '').toString())
+            .where((s) => s.isNotEmpty)
+            .toList();
       }
     });
 
