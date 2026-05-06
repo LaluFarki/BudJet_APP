@@ -622,7 +622,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                 icon: const Icon(Icons.edit_outlined, size: 20),
                 label: const Text('Edit Transaksi'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF66BB6A),
+                  backgroundColor: const Color(0xFFDCE775),
                   foregroundColor: AppColors.textDark,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
