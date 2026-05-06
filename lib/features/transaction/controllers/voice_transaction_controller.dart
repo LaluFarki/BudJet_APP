@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
@@ -155,7 +156,11 @@ class VoiceTransactionController extends GetxController {
   
   void startListening() async {
     if (!isSpeechEnabled.value) {
-      Get.snackbar("Error", "Izin mikrofon belum diberikan atau tidak didukung.");
+      Get.snackbar("Error", "Izin mikrofon belum diberikan atau tidak didukung.",
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
       return;
     }
 

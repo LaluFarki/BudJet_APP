@@ -298,6 +298,7 @@ class AddTransactionScreen extends StatelessWidget {
   }
 
   void _submit() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (_formKey.currentState!.validate()) {
       // final TransactionModel? existingTx = Get.arguments as TransactionModel?;
       final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
@@ -639,39 +640,42 @@ class AddTransactionScreen extends StatelessWidget {
                         ),
                       ),
                       // Indikator sisa saldo real-time
-                      Obx(() {
-                        // final existingTx = Get.arguments as TransactionModel?;
-                        if (existingTx != null) return const SizedBox.shrink();
-                        final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
-                        final setelahTransaksi = sisaSaldo - _enteredAmount.value;
-                        final cukup = setelahTransaksi >= 0;
-                        if (_enteredAmount.value <= 0) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8, left: 4),
-                          child: Row(
-                            children: [
-                              Icon(
-                                cukup
-                                    ? Icons.check_circle_outline
-                                    : Icons.warning_amber_rounded,
-                                size: 14,
-                                color: cukup ? Colors.green : Colors.red,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                cukup
-                                    ? 'Sisa saldo: ${AppHelpers.formatCurrency(setelahTransaksi)}'
-                                    : 'Saldo tidak cukup! Kurang ${AppHelpers.formatCurrency(-setelahTransaksi)}',
-                                style: TextStyle(
-                                  fontSize: 12,
+                      if (existingTx == null)
+                        Obx(() {
+                          final sisaSaldo = txController.budgetBulanan.value -
+                              txController.totalExpense;
+                          final setelahTransaksi =
+                              sisaSaldo - _enteredAmount.value;
+                          final cukup = setelahTransaksi >= 0;
+                          if (_enteredAmount.value <= 0) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8, left: 4),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  cukup
+                                      ? Icons.check_circle_outline
+                                      : Icons.warning_amber_rounded,
+                                  size: 14,
                                   color: cukup ? Colors.green : Colors.red,
-                                  fontWeight: FontWeight.w500,
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
+                                const SizedBox(width: 4),
+                                Text(
+                                  cukup
+                                      ? 'Sisa saldo: ${AppHelpers.formatCurrency(setelahTransaksi)}'
+                                      : 'Saldo tidak cukup! Kurang ${AppHelpers.formatCurrency(-setelahTransaksi)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: cukup ? Colors.green : Colors.red,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
 
                       const SizedBox(height: 16),
 

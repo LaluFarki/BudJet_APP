@@ -122,8 +122,10 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
       Get.snackbar(
         'Gagal',
         'Terjadi kesalahan: $e',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.red.shade100,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);

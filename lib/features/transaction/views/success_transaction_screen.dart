@@ -101,7 +101,7 @@ class SuccessTransactionScreen extends StatelessWidget {
                           style: TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.w500),
                         ),
                         Text(
-                          'Rp ${tx.amount.toStringAsFixed(0)}',
+                          NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(tx.amount),
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 22,
@@ -133,6 +133,24 @@ class SuccessTransactionScreen extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 24),
+                    
+                    // Baris Nama Pengeluaran / Judul Transaksi
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Nama Pengeluaran', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                        Expanded(
+                          child: Text(
+                            tx.title.isNotEmpty ? tx.title : '-', 
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textDark),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
                     
                     // Baris Kategori
                     Row(
@@ -170,7 +188,7 @@ class SuccessTransactionScreen extends StatelessWidget {
                           // Karena saldo Reactive, ia akan menampilkan saldo terbaru yg sudah dipotong di fitur Tambah
                           final txCtrl = Get.find<TransactionController>();
                           return Text(
-                            'Rp ${txCtrl.userBalance.value.toStringAsFixed(0)}',
+                            NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(txCtrl.userBalance.value),
                             style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 18,

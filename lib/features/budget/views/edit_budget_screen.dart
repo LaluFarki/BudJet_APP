@@ -400,8 +400,10 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                               Get.snackbar(
                                 'Gagal',
                                 'Kategori sudah ada',
-                                snackPosition: SnackPosition.BOTTOM,
-                              );
+                                snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
                               return;
                             }
 
@@ -613,14 +615,18 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
       Get.snackbar(
         'Berhasil',
         'Budget telah diupdate.',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } catch (e) {
       Get.back();
       Get.snackbar(
         'Gagal',
         'Terjadi kesalahan: $e',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     }
   }

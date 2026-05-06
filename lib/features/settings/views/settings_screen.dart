@@ -345,8 +345,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               Get.snackbar(
                                 'Kata Sandi Kosong',
                                 'Masukkan kata sandi terlebih dahulu.',
-                                snackPosition: SnackPosition.BOTTOM,
-                              );
+                                snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
                               return;
                             }
                             isDeleting.value = true;
@@ -394,9 +396,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       Get.snackbar(
         'Akun Dihapus',
         'Akun dan semua datamu telah dihapus secara permanen.',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFFECFFEC),
         colorText: const Color(0xFF1B5E20),
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } on FirebaseAuthException catch (e) {
       String pesan;
@@ -410,9 +414,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       Get.snackbar(
         'Gagal',
         pesan,
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFFFFECEC),
         colorText: const Color(0xFF8B0000),
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     }
   }
@@ -434,15 +440,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       Get.snackbar(
         'Akun Dihapus',
         'Akun dan semua datamu telah dihapus secara permanen.',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } catch (e) {
       Get.snackbar(
         'Gagal',
         'Gagal menghapus akun. Silakan coba lagi.',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFFFFECEC),
         colorText: const Color(0xFF8B0000),
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     }
   }

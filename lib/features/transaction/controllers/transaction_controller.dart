@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/transaction_model.dart';
 
@@ -146,7 +147,9 @@ class TransactionController extends GetxController {
       Get.snackbar(
         'Gagal',
         'Terjadi kesalahan: $e',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
       isAddingIncome.value = false;
@@ -187,7 +190,9 @@ class TransactionController extends GetxController {
       Get.snackbar(
         'Gagal',
         'Tidak bisa menghapus: $e',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     }
   }
@@ -231,7 +236,9 @@ class TransactionController extends GetxController {
       Get.snackbar(
         'Gagal',
         'Terjadi kesalahan edit: $e',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
       rethrow;
     }

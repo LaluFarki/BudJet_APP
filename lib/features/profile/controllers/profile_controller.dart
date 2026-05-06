@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -92,14 +93,18 @@ class ProfileController extends GetxController {
         Get.snackbar(
           'Tersimpan',
           'Foto profil Anda berhasil diganti!',
-          snackPosition: SnackPosition.BOTTOM,
-        );
+          snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
       }
     } catch (e) {
       Get.snackbar(
         'Gagal',
         'Tidak dapat memilih gambar: $e',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     }
   }

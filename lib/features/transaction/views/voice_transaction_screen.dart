@@ -177,7 +177,11 @@ class VoiceTransactionScreen extends StatelessWidget {
                                   controller.saveTransaction(); 
                                 } else {
                                   Get.snackbar("Perhatian", "Silakan bicara terlebih dahulu",
-                                      backgroundColor: Colors.white, colorText: Colors.black);
+                                      backgroundColor: Colors.white, colorText: Colors.black,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
                                 }
                               },
                               style: ElevatedButton.styleFrom(

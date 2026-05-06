@@ -65,10 +65,11 @@ class AuthController extends GetxController {
         _pesanError(e, konteks: 'login'),
         backgroundColor: const Color(0xFFFFECEC),
         colorText: const Color(0xFF8B0000),
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         duration: const Duration(seconds: 4),
-        margin: const EdgeInsets.all(16),
         borderRadius: 12,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
       isLoading.value = false;
@@ -98,10 +99,11 @@ class AuthController extends GetxController {
         'Akun berhasil dibuat. Silakan masuk dengan email dan kata sandimu.',
         backgroundColor: const Color(0xFFECFFEC),
         colorText: const Color(0xFF1B5E20),
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         duration: const Duration(seconds: 4),
-        margin: const EdgeInsets.all(16),
         borderRadius: 12,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
       Get.offAllNamed(AppRoutes.login);
     } on FirebaseAuthException catch (e) {
@@ -110,10 +112,11 @@ class AuthController extends GetxController {
         _pesanError(e, konteks: 'register'),
         backgroundColor: const Color(0xFFFFECEC),
         colorText: const Color(0xFF8B0000),
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         duration: const Duration(seconds: 4),
-        margin: const EdgeInsets.all(16),
         borderRadius: 12,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
       isLoading.value = false;
@@ -172,11 +175,12 @@ class AuthController extends GetxController {
           _pesanError(e, konteks: 'google'),
           backgroundColor: const Color(0xFFFFECEC),
           colorText: const Color(0xFF8B0000),
-          snackPosition: SnackPosition.BOTTOM,
+          snackPosition: SnackPosition.TOP,
           duration: const Duration(seconds: 4),
-          margin: const EdgeInsets.all(16),
           borderRadius: 12,
-        );
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
       }
     } catch (e) {
       Get.snackbar(
@@ -184,10 +188,11 @@ class AuthController extends GetxController {
         'Terjadi masalah saat login dengan Google. Pastikan kamu terhubung ke internet.',
         backgroundColor: const Color(0xFFFFECEC),
         colorText: const Color(0xFF8B0000),
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         duration: const Duration(seconds: 4),
-        margin: const EdgeInsets.all(16),
         borderRadius: 12,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
       isLoading.value = false;
@@ -209,11 +214,12 @@ class AuthController extends GetxController {
               'Periksa kotak masuk atau folder spam kamu.',
           backgroundColor: const Color(0xFFECFFEC),
           colorText: const Color(0xFF1B5E20),
-          snackPosition: SnackPosition.BOTTOM,
+          snackPosition: SnackPosition.TOP,
           duration: const Duration(seconds: 5),
-          margin: const EdgeInsets.all(16),
           borderRadius: 12,
-        );
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
       }
     } on FirebaseAuthException catch (e) {
       Get.snackbar(
@@ -221,10 +227,11 @@ class AuthController extends GetxController {
         _pesanError(e, konteks: 'reset'),
         backgroundColor: const Color(0xFFFFECEC),
         colorText: const Color(0xFF8B0000),
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         duration: const Duration(seconds: 4),
-        margin: const EdgeInsets.all(16),
         borderRadius: 12,
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
       isLoading.value = false;
