@@ -236,6 +236,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
                             : const Text('Daftar →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       )),
+                      const SizedBox(height: 30),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Sudah punya akun? ',
+                            style: TextStyle(color: Colors.blueGrey, fontSize: 13),
+                          ),
+                          GestureDetector(
+                            // Gunakan Get.back() jika halaman sebelumnya adalah Login
+                            // Atau gunakan Get.toNamed(AppRoutes.login) jika ingin navigasi spesifik
+                            onTap: () => Get.back(), 
+                            child: const Text(
+                              'Masuk',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

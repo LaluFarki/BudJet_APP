@@ -180,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 30),
                       
                       // Login Button
                       Obx(() => ElevatedButton(
@@ -223,49 +223,49 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       
                       // Google Login Button
-                      OutlinedButton(
-                        onPressed: () => _authController.loginWithGoogle(),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          backgroundColor: Colors.white,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Logo "G" Google buatan sendiri
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Text(
-                                'G',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF4285F4), // Biru Google
-                                  height: 1.3,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            const Text(
-                              'Masuk Dengan Google',
-                              style: TextStyle(
-                                color: Colors.black87,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      // OutlinedButton(
+                      //   onPressed: () => _authController.loginWithGoogle(),
+                      //   style: OutlinedButton.styleFrom(
+                      //     padding: const EdgeInsets.symmetric(vertical: 14),
+                      //     side: BorderSide(color: Colors.grey.shade300),
+                      //     shape: RoundedRectangleBorder(
+                      //       borderRadius: BorderRadius.circular(12),
+                      //     ),
+                      //     backgroundColor: Colors.white,
+                      //   ),
+                      //   child: Row(
+                      //     mainAxisAlignment: MainAxisAlignment.center,
+                      //     children: [
+                      //       // Logo "G" Google buatan sendiri
+                      //       Container(
+                      //         width: 24,
+                      //         height: 24,
+                      //         decoration: const BoxDecoration(
+                      //           shape: BoxShape.circle,
+                      //         ),
+                      //         child: const Text(
+                      //           'G',
+                      //           textAlign: TextAlign.center,
+                      //           style: TextStyle(
+                      //             fontSize: 18,
+                      //             fontWeight: FontWeight.bold,
+                      //             color: Color(0xFF4285F4), // Biru Google
+                      //             height: 1.3,
+                      //           ),
+                      //         ),
+                      //       ),
+                      //       const SizedBox(width: 10),
+                      //       const Text(
+                      //         'Masuk Dengan Google',
+                      //         style: TextStyle(
+                      //           color: Colors.black87,
+                      //           fontWeight: FontWeight.w600,
+                      //           fontSize: 15,
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
                       
                       const SizedBox(height: 24),
                       

@@ -78,8 +78,18 @@ class ExpenseSummary extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: AppColors.cardRed.withValues(alpha: 0.8),
+                  color: const Color(0xF8FFD2).withValues(alpha: 0.8),
+                  border: Border.all(
+                    color: const Color(0xFFD4F069).withValues(alpha: 0.8)
+                  ),
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow:[
+                    BoxShadow(
+                      color: Colors.grey.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ]
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -194,7 +194,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Apakah kamu yakin ingin keluar dari BudJet?\nKamu bisa masuk kembali kapan saja dengan email atau akun Google-mu.',
+                'Apakah kamu yakin ingin keluar dari BudJet?\nKamu bisa masuk kembali kapan saja dengan email',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
