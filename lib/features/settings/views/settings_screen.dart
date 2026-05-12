@@ -49,7 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: Icons.lock_outline_rounded,
                 iconColor: const Color(0xFF4791EB),
                 iconBgColor: const Color(0xFFE3EFFF),
-                onTap: () => Get.toNamed('/forgot-password'),
+                onTap: () => _showChangePasswordDialog(context),
               ),
               const SizedBox(height: 12),
               _buildMenuCard(
@@ -188,6 +188,198 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // Dialog ganti kata sandi
+  void _showChangePasswordDialog(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final isGoogle = user.providerData.any((p) => p.providerId == 'google.com');
+    if (isGoogle) {
+      Get.snackbar(
+        'Perhatian',
+        'Akun yang login dengan Google tidak dapat mengganti kata sandi dari aplikasi.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFFFFECEC),
+        colorText: const Color(0xFF8B0000),
+        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      );
+      return;
+    }
+
+    final currentPasswordCtrl = TextEditingController();
+    final newPasswordCtrl = TextEditingController();
+    final isCurrentObscure = ValueNotifier<bool>(true);
+    final isNewObscure = ValueNotifier<bool>(true);
+    final isSaving = ValueNotifier<bool>(false);
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Ganti Kata Sandi',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Masukkan kata sandi saat ini dan kata sandi baru untuk akunmu.',
+                style: TextStyle(fontSize: 13, color: Colors.blueGrey, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              ValueListenableBuilder<bool>(
+                valueListenable: isCurrentObscure,
+                builder: (_, obscure, __) => TextField(
+                  controller: currentPasswordCtrl,
+                  obscureText: obscure,
+                  decoration: InputDecoration(
+                    labelText: 'Kata Sandi Saat Ini',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      onPressed: () => isCurrentObscure.value = !isCurrentObscure.value,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ValueListenableBuilder<bool>(
+                valueListenable: isNewObscure,
+                builder: (_, obscure, __) => TextField(
+                  controller: newPasswordCtrl,
+                  obscureText: obscure,
+                  decoration: InputDecoration(
+                    labelText: 'Kata Sandi Baru',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      onPressed: () => isNewObscure.value = !isNewObscure.value,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Get.back(),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.grey),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: isSaving,
+                  builder: (_, saving, __) => ElevatedButton(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            final currentPwd = currentPasswordCtrl.text;
+                            final newPwd = newPasswordCtrl.text;
+
+                            if (currentPwd.isEmpty || newPwd.isEmpty) {
+                              Get.snackbar(
+                                'Error',
+                                'Semua kolom harus diisi.',
+                                snackPosition: SnackPosition.TOP,
+                                backgroundColor: const Color(0xFFFFECEC),
+                                colorText: const Color(0xFF8B0000),
+                                margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                              );
+                              return;
+                            }
+
+                            if (newPwd.length < 8 ||
+                                !newPwd.contains(RegExp(r'[A-Z]')) ||
+                                !newPwd.contains(RegExp(r'[a-z]')) ||
+                                !newPwd.contains(RegExp(r'[0-9]'))) {
+                              Get.snackbar(
+                                'Peringatan',
+                                'Kata sandi minimal 8 karakter, harus terdiri dari huruf besar, huruf kecil, dan angka.',
+                                backgroundColor: Colors.redAccent,
+                                colorText: Colors.white,
+                                snackPosition: SnackPosition.TOP,
+                                margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                              );
+                              return;
+                            }
+
+                            isSaving.value = true;
+                            try {
+                              final credential = EmailAuthProvider.credential(
+                                email: user.email!,
+                                password: currentPwd,
+                              );
+                              await user.reauthenticateWithCredential(credential);
+                              await user.updatePassword(newPwd);
+                              
+                              Get.back(); // Tutup dialog
+                              Get.snackbar(
+                                'Sukses',
+                                'Kata sandi berhasil diubah.',
+                                backgroundColor: const Color(0xFFECFFEC),
+                                colorText: const Color(0xFF1B5E20),
+                                snackPosition: SnackPosition.TOP,
+                                margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                              );
+                            } on FirebaseAuthException catch (e) {
+                              String pesan = 'Gagal mengganti kata sandi. Silakan coba lagi.';
+                              if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+                                pesan = 'Kata sandi saat ini salah.';
+                              } else if (e.code == 'too-many-requests') {
+                                pesan = 'Terlalu banyak percobaan. Coba beberapa saat lagi.';
+                              }
+                              Get.snackbar(
+                                'Gagal',
+                                pesan,
+                                snackPosition: SnackPosition.TOP,
+                                backgroundColor: const Color(0xFFFFECEC),
+                                colorText: const Color(0xFF8B0000),
+                                margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                              );
+                            } finally {
+                              isSaving.value = false;
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4791EB),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: saving
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Simpan'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      barrierDismissible: false,
     );
   }
 
