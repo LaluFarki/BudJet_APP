@@ -85,71 +85,170 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
         builder: (context, setDialogState) {
           bool showNameWarning = false;
           Timer? nameWarningTimer;
-          return AlertDialog(
-            title: const Text('Tambah Kategori'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Nama Kategori',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                TextField(
-                  controller: controller,
-                  onChanged: (val) {
-                    if (val.length < 20 && showNameWarning) {
-                      setDialogState(() => showNameWarning = false);
-                    }
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan kategori',
-                    errorText: showNameWarning ? 'Maksimal 20 Karakter!' : null,
-                    errorStyle: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 12,
-                      height: 0.8, // Menaikkan posisi teks tanpa merusak box
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            backgroundColor: Colors.white,
+            elevation: 8,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+
+                  
+                  // Title and Subtitle
+                  const Text(
+                    'Kategori Baru',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                    TextInputFormatter.withFunction((oldValue, newValue) {
-                      if (newValue.text.length > 20) {
-                        if (!showNameWarning) {
-                          nameWarningTimer?.cancel();
-                          setDialogState(() => showNameWarning = true);
-                          nameWarningTimer = Timer(const Duration(seconds: 3), () {
-                            setDialogState(() => showNameWarning = false);
-                          });
-                        }
-                        return oldValue;
-                      }
-                      return newValue;
-                    }),
-                  ],
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Tambahkan kategori pengeluaran khusus\nuntuk kemudahan pencatatan Anda.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Input Field
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Nama Kategori',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F6FA),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: showNameWarning ? Colors.red.shade300 : Colors.grey.shade200,
+                          ),
+                        ),
+                        child: TextField(
+                          controller: controller,
+                          onChanged: (val) {
+                            if (val.length < 20 && showNameWarning) {
+                              setDialogState(() => showNameWarning = false);
+                            }
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Misal: Belanja Bulanan',
+                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                            TextInputFormatter.withFunction((oldValue, newValue) {
+                              if (newValue.text.length > 20) {
+                                if (!showNameWarning) {
+                                  nameWarningTimer?.cancel();
+                                  setDialogState(() => showNameWarning = true);
+                                  nameWarningTimer = Timer(const Duration(seconds: 3), () {
+                                    if (context.mounted) {
+                                      setDialogState(() => showNameWarning = false);
+                                    }
+                                  });
+                                }
+                                return oldValue;
+                              }
+                              return newValue;
+                            }),
+                          ],
+                        ),
+                      ),
+                      if (showNameWarning)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6, left: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 12, color: Colors.red.shade400),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Maksimal 20 Karakter!',
+                                style: TextStyle(
+                                  color: Colors.red.shade400,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Batal',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            final nama = controller.text.trim();
+                            if (ValidationHelper.isLengthExceeded(nama, 20)) return;
+                            if (nama.isNotEmpty && !kategoriList.contains(nama)) {
+                              setState(() {
+                                kategoriList.add(nama);
+                                isSelected.add(true);
+                              });
+                            }
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFD6E85A),
+                            foregroundColor: Colors.black,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Simpan',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final nama = controller.text.trim();
-                  if (ValidationHelper.isLengthExceeded(nama, 20)) return;
-                  if (nama.isNotEmpty && !kategoriList.contains(nama)) {
-                    setState(() {
-                      kategoriList.add(nama);
-                      isSelected.add(true);
-                    });
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text('Tambah'),
-              ),
-            ],
           );
         },
       ),
@@ -360,84 +459,122 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                       ),
                       const SizedBox(height: 15),
 
-                      ElevatedButton(
-                        onPressed: _tambahKategori,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey.shade200,
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                        ),
-                        child: const Text('Buat Kategori'),
-                      ),
-
-                      const SizedBox(height: 20),
-
                       Wrap(
                         spacing: 12,
                         runSpacing: 12,
-                        children: List.generate(
-                          kategoriList.length,
-                              (index) => GestureDetector(
-                            onTap: () => setState(
-                                  () => isSelected[index] = !isSelected[index],
-                            ),
+                        children: [
+                          // Tombol Tambah Kategori Spesial
+                          GestureDetector(
+                            onTap: _tambahKategori,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                color: isSelected[index]
-                                    ? const Color(0xFFD4E858)
-                                    : Colors.white,
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(25),
                                 border: Border.all(
-                                  color: isSelected[index]
-                                      ? const Color(0xFFD4E858)
-                                      : Colors.grey.shade300,
+                                  color: Colors.grey.shade300,
+                                  width: 1.5,
                                 ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  )
+                                ],
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    AppHelpers.getCategoryIcon(
-                                        kategoriList[index]),
-                                    size: 18,
-                                    color: isSelected[index]
-                                        ? Colors.black87
-                                        : Colors.grey.shade600,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    kategoriList[index],
-                                    style: TextStyle(
-                                      color: isSelected[index]
-                                          ? Colors.black87
-                                          : Colors.grey.shade700,
-                                      fontWeight: isSelected[index]
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    padding: const EdgeInsets.all(2),
+                                    child: const Icon(
+                                      Icons.add,
+                                      size: 14,
+                                      color: Colors.black87,
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
-                                  Icon(
-                                    isSelected[index]
-                                        ? Icons.check_circle
-                                        : Icons.add_circle_outline,
-                                    size: 14,
-                                    color: isSelected[index]
-                                        ? Colors.black54
-                                        : Colors.grey.shade400,
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Buat Kategori',
+                                    style: TextStyle(
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                        ),
+                          // List Kategori
+                          ...List.generate(
+                            kategoriList.length,
+                            (index) => GestureDetector(
+                              onTap: () => setState(
+                                    () => isSelected[index] = !isSelected[index],
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected[index]
+                                      ? const Color(0xFFD4E858)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(25),
+                                  border: Border.all(
+                                    color: isSelected[index]
+                                        ? const Color(0xFFD4E858)
+                                        : Colors.grey.shade300,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      AppHelpers.getCategoryIcon(
+                                          kategoriList[index]),
+                                      size: 18,
+                                      color: isSelected[index]
+                                          ? Colors.black87
+                                          : Colors.grey.shade600,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      kategoriList[index],
+                                      style: TextStyle(
+                                        color: isSelected[index]
+                                            ? Colors.black87
+                                            : Colors.grey.shade700,
+                                        fontWeight: isSelected[index]
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Icon(
+                                      isSelected[index]
+                                          ? Icons.check_circle
+                                          : Icons.add_circle_outline,
+                                      size: 14,
+                                      color: isSelected[index]
+                                          ? Colors.black54
+                                          : Colors.grey.shade400,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 40),

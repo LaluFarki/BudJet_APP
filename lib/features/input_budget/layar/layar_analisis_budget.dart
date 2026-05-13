@@ -172,17 +172,10 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
         leading: Padding(
           padding: const EdgeInsets.only(left: 16),
           child: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.arrow_back,
-                color: Color(0xFF1E1E1E),
-                size: 20,
-              ),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Color(0xFF1E1E1E),
+              size: 20,
             ),
             onPressed: () => Navigator.pop(context),
           ),
