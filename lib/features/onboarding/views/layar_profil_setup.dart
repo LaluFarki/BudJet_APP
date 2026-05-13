@@ -295,59 +295,67 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                       ),
                     ],
                   ),
-                  child: TextFormField(
-                    controller: _nameController,
-                    textCapitalization: TextCapitalization.words,
-                    onChanged: (val) {
-                      if (val.length < 20 && _showNameWarning) {
-                        setState(() => _showNameWarning = false);
-                      }
-                    },
-                    inputFormatters: [
-                      TextInputFormatter.withFunction((oldValue, newValue) {
-                        if (newValue.text.length > 20) {
-                          if (!_showNameWarning) {
-                            _nameWarningTimer?.cancel();
-                            setState(() => _showNameWarning = true);
-                            _nameWarningTimer = Timer(const Duration(seconds: 3), () {
-                              if (mounted) setState(() => _showNameWarning = false);
-                            });
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        textCapitalization: TextCapitalization.words,
+                        onChanged: (val) {
+                          if (val.length < 20 && _showNameWarning) {
+                            setState(() => _showNameWarning = false);
                           }
-                          return oldValue;
-                        }
-                        return newValue;
-                      }),
+                        },
+                        inputFormatters: [
+                          TextInputFormatter.withFunction((oldValue, newValue) {
+                            if (newValue.text.length > 20) {
+                              if (!_showNameWarning) {
+                                _nameWarningTimer?.cancel();
+                                setState(() => _showNameWarning = true);
+                                _nameWarningTimer = Timer(const Duration(seconds: 3), () {
+                                  if (mounted) setState(() => _showNameWarning = false);
+                                });
+                              }
+                              return oldValue;
+                            }
+                            return newValue;
+                          }),
+                        ],
+                        decoration: InputDecoration(
+                          hintText: 'Masukkan nama kamu...',
+                          hintStyle: TextStyle(color: Colors.grey.shade400),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 16,
+                          ),
+                          prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Nama tidak boleh kosong';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (_showNameWarning)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4, left: 16, bottom: 8),
+                          child: Text(
+                            'Maksimal 20 Karakter!',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                     ],
-                    decoration: InputDecoration(
-                      hintText: 'Masukkan nama kamu...',
-                      errorText: _showNameWarning ? 'Maksimal 20 Karakter!' : null,
-                      errorStyle: const TextStyle(
-                        color: Colors.red,
-                        fontSize: 12,
-                        height: 0.8, // Menaikkan sedikit tanpa merusak box
-                      ),
-                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                      prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
-                    ),
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Nama tidak boleh kosong';
-                      }
-                      if (val.trim().length > 20) {
-                        return 'Maksimal 20 Karakter!';
-                      }
-                      return null;
-                    },
                   ),
                 ),
 

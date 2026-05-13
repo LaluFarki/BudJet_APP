@@ -896,55 +896,66 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
-          TextFormField(
-            controller: _catControllers[i],
-            keyboardType: TextInputType.number,
-            onChanged: (val) {
-              final amount = ValidationHelper.parseRupiah(val);
-              if (amount < 100000000 && (_showCatWarning[i] ?? false)) {
-                setState(() => _showCatWarning[i] = false);
-              }
-              _formatRupiah(_catControllers[i], val);
-              setState(() { _hasChanged = true; });
-            },
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              TextInputFormatter.withFunction((oldValue, newValue) {
-                final amount = ValidationHelper.parseRupiah(newValue.text);
-                if (amount > 100000000) {
-                  if (!(_showCatWarning[i] ?? false)) {
-                    _catWarningTimers[i]?.cancel();
-                    setState(() => _showCatWarning[i] = true);
-                    _catWarningTimers[i] = Timer(const Duration(seconds: 3), () {
-                      if (mounted) setState(() => _showCatWarning[i] = false);
-                    });
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _catControllers[i],
+                keyboardType: TextInputType.number,
+                onChanged: (val) {
+                  final amount = ValidationHelper.parseRupiah(val);
+                  if (amount < 100000000 && (_showCatWarning[i] ?? false)) {
+                    setState(() => _showCatWarning[i] = false);
                   }
-                  return const TextEditingValue(
-                    text: '100.000.000',
-                    selection: TextSelection.collapsed(offset: 11),
-                  );
-                }
-                return newValue;
-              }),
+                  _formatRupiah(_catControllers[i], val);
+                  setState(() { _hasChanged = true; });
+                },
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  TextInputFormatter.withFunction((oldValue, newValue) {
+                    final amount = ValidationHelper.parseRupiah(newValue.text);
+                    if (amount > 100000000) {
+                      if (!(_showCatWarning[i] ?? false)) {
+                        _catWarningTimers[i]?.cancel();
+                        setState(() => _showCatWarning[i] = true);
+                        _catWarningTimers[i] = Timer(const Duration(seconds: 3), () {
+                          if (mounted) setState(() => _showCatWarning[i] = false);
+                        });
+                      }
+                      return const TextEditingValue(
+                        text: '100.000.000',
+                        selection: TextSelection.collapsed(offset: 11),
+                      );
+                    }
+                    return newValue;
+                  }),
+                ],
+                decoration: InputDecoration(
+                  hintText: 'Budget tersisa',
+                  helperText:
+                      'Sisa budget ${catName.toLowerCase()} per ${_periodSuffix(period)}',
+                  helperStyle: const TextStyle(fontSize: 12),
+                  filled: true,
+                  fillColor: const Color(0xFFF1F3F6),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              if (_showCatWarning[i] ?? false)
+                const Padding(
+                  padding: EdgeInsets.only(top: 2, left: 12),
+                  child: Text(
+                    'Max Rp 100.000.000!',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
             ],
-            decoration: InputDecoration(
-              hintText: 'Budget tersisa',
-              helperText:
-                  'Sisa budget ${catName.toLowerCase()} per ${_periodSuffix(period)}',
-              helperStyle: const TextStyle(fontSize: 12),
-              errorText: (_showCatWarning[i] ?? false) ? 'Max Rp 100.000.000!' : null,
-              errorStyle: const TextStyle(
-                color: Colors.red,
-                fontSize: 12,
-                height: 0.8, // Naikkan posisi tanpa merusak box
-              ),
-              filled: true,
-              fillColor: const Color(0xFFF1F3F6),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
           ),
         ],
       ),
@@ -1009,58 +1020,67 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                 ),
                               ],
                             ),
-                            child: TextFormField(
-                              controller: _totalBudgetCtrl,
-                              keyboardType: TextInputType.number,
-                              onChanged: (val) {
-                                final amount = ValidationHelper.parseRupiah(val);
-                                if (amount < 100000000 && _showTotalBudgetWarning) {
-                                  setState(() => _showTotalBudgetWarning = false);
-                                }
-                                setState(() {
-                                  _hasChanged = true;
-                                });
-                              },
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                TextInputFormatter.withFunction((oldValue, newValue) {
-                                  final amount = ValidationHelper.parseRupiah(newValue.text);
-                                  if (amount > 100000000) {
-                                    if (!_showTotalBudgetWarning) {
-                                      _totalBudgetWarningTimer?.cancel();
-                                      setState(() => _showTotalBudgetWarning = true);
-                                      _totalBudgetWarningTimer = Timer(const Duration(seconds: 3), () {
-                                        if (mounted) setState(() => _showTotalBudgetWarning = false);
-                                      });
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextFormField(
+                                  controller: _totalBudgetCtrl,
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (val) {
+                                    final amount = ValidationHelper.parseRupiah(val);
+                                    if (amount < 100000000 && _showTotalBudgetWarning) {
+                                      setState(() => _showTotalBudgetWarning = false);
                                     }
-                                    return const TextEditingValue(
-                                      text: '100.000.000',
-                                      selection: TextSelection.collapsed(offset: 11),
-                                    );
-                                  }
-                                  return newValue;
-                                }),
+                                    setState(() {
+                                      _hasChanged = true;
+                                    });
+                                  },
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    TextInputFormatter.withFunction((oldValue, newValue) {
+                                      final amount = ValidationHelper.parseRupiah(newValue.text);
+                                      if (amount > 100000000) {
+                                        if (!_showTotalBudgetWarning) {
+                                          _totalBudgetWarningTimer?.cancel();
+                                          setState(() => _showTotalBudgetWarning = true);
+                                          _totalBudgetWarningTimer = Timer(const Duration(seconds: 3), () {
+                                            if (mounted) setState(() => _showTotalBudgetWarning = false);
+                                          });
+                                        }
+                                        return const TextEditingValue(
+                                          text: '100.000.000',
+                                          selection: TextSelection.collapsed(offset: 11),
+                                        );
+                                      }
+                                      return newValue;
+                                    }),
+                                  ],
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Budget Anda',
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 15,
+                                    ),
+                                    border: InputBorder.none,
+                                  ),
+                                ),
+                                if (_showTotalBudgetWarning)
+                                  const Padding(
+                                    padding: EdgeInsets.only(left: 20, bottom: 8),
+                                    child: Text(
+                                      'Max Rp 100.000.000!',
+                                      style: TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
                               ],
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                              decoration: InputDecoration(
-                                hintText: 'Budget Anda',
-                                filled: true,
-                                fillColor: Colors.white,
-                                errorText: _showTotalBudgetWarning ? 'Max Rp 100.000.000!' : null,
-                                errorStyle: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 12,
-                                  height: 0.8, // Naikkan posisi tanpa merusak box
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 15,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
                             ),
                           ),
                           const SizedBox(height: 16),

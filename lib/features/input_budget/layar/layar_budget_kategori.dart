@@ -412,55 +412,66 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 8),
-                          TextFormField(
-                            controller: controllers[index],
-                            keyboardType: TextInputType.number,
-                            onChanged: (value) {
-                              final amount = ValidationHelper.parseRupiah(value);
-                              if (amount < 100000000 && (_showNominalWarning[index] ?? false)) {
-                                setState(() => _showNominalWarning[index] = false);
-                              }
-                              _formatRupiah(controllers[index], value);
-                            },
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              TextInputFormatter.withFunction((oldValue, newValue) {
-                                final amount = ValidationHelper.parseRupiah(newValue.text);
-                                if (amount > 100000000) {
-                                  if (!(_showNominalWarning[index] ?? false)) {
-                                    _nominalWarningTimers[index]?.cancel();
-                                    setState(() => _showNominalWarning[index] = true);
-                                    _nominalWarningTimers[index] = Timer(const Duration(seconds: 3), () {
-                                      if (mounted) setState(() => _showNominalWarning[index] = false);
-                                    });
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextFormField(
+                                controller: controllers[index],
+                                keyboardType: TextInputType.number,
+                                onChanged: (value) {
+                                  final amount = ValidationHelper.parseRupiah(value);
+                                  if (amount < 100000000 && (_showNominalWarning[index] ?? false)) {
+                                    setState(() => _showNominalWarning[index] = false);
                                   }
-                                  return const TextEditingValue(
-                                    text: 'Rp 100.000.000',
-                                    selection: TextSelection.collapsed(offset: 14),
-                                  );
-                                }
-                                return newValue;
-                              }),
+                                  _formatRupiah(controllers[index], value);
+                                },
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  TextInputFormatter.withFunction((oldValue, newValue) {
+                                    final amount = ValidationHelper.parseRupiah(newValue.text);
+                                    if (amount > 100000000) {
+                                      if (!(_showNominalWarning[index] ?? false)) {
+                                        _nominalWarningTimers[index]?.cancel();
+                                        setState(() => _showNominalWarning[index] = true);
+                                        _nominalWarningTimers[index] = Timer(const Duration(seconds: 3), () {
+                                          if (mounted) setState(() => _showNominalWarning[index] = false);
+                                        });
+                                      }
+                                      return const TextEditingValue(
+                                        text: 'Rp 100.000.000',
+                                        selection: TextSelection.collapsed(offset: 14),
+                                      );
+                                    }
+                                    return newValue;
+                                  }),
+                                ],
+                                decoration: InputDecoration(
+                                  hintText:
+                                      'Nominal per ${periodeList[index].toLowerCase()}',
+                                  helperText:
+                                      'Jatah ${kategori.toLowerCase()} per ${periodeList[index].toLowerCase()}',
+                                  helperStyle: const TextStyle(fontSize: 12),
+                                  filled: true,
+                                  fillColor: const Color(0xFFF1F3F6),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                              ),
+                              if (_showNominalWarning[index] ?? false)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 2, left: 12),
+                                  child: Text(
+                                    'Max Rp 100.000.000!',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
                             ],
-                            decoration: InputDecoration(
-                              hintText:
-                                  'Nominal per ${periodeList[index].toLowerCase()}',
-                              helperText:
-                                  'Jatah ${kategori.toLowerCase()} per ${periodeList[index].toLowerCase()}',
-                              helperStyle: const TextStyle(fontSize: 12),
-                              errorText: (_showNominalWarning[index] ?? false) ? 'Max Rp 100.000.000!' : null,
-                              errorStyle: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                                height: 0.8, // Naikkan posisi tanpa merusak box
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFFF1F3F6),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
                           ),
 
                           // 👇 TAMBAHKAN DI SINI

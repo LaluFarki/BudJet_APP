@@ -251,54 +251,71 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
-                        child: TextFormField(
-                          controller: _budgetController,
-                          keyboardType: TextInputType.number,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          onChanged: (val) {
-                            final amount = ValidationHelper.parseRupiah(val);
-                            if (amount < 100000000 && _showBudgetWarning) {
-                              setState(() => _showBudgetWarning = false);
-                            }
-                          },
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            TextInputFormatter.withFunction((oldValue, newValue) {
-                              final amount = ValidationHelper.parseRupiah(newValue.text);
-                              if (amount > 100000000) {
-                                if (!_showBudgetWarning) {
-                                  _budgetWarningTimer?.cancel();
-                                  setState(() => _showBudgetWarning = true);
-                                  _budgetWarningTimer = Timer(const Duration(seconds: 3), () {
-                                    if (mounted) setState(() => _showBudgetWarning = false);
-                                  });
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextFormField(
+                              controller: _budgetController,
+                              keyboardType: TextInputType.number,
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                              onChanged: (val) {
+                                final amount = ValidationHelper.parseRupiah(val);
+                                if (amount < 100000000 && _showBudgetWarning) {
+                                  setState(() => _showBudgetWarning = false);
                                 }
-                                // Mentokkan ke 100jt
-                                return const TextEditingValue(
-                                  text: '100000000',
-                                  selection: TextSelection.collapsed(offset: 9),
-                                );
-                              }
-                              return newValue;
-                            }),
-                          ],
-                          validator: (val) {
-                            if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
-                              return 'Hanya menerima input angka';
-                            }
-                            return null;
-                          },
-                          decoration: InputDecoration(
-                            prefixText: 'Rp ',
-                            border: InputBorder.none,
-                            isDense: true,
-                            errorText: _showBudgetWarning ? 'Max Rp 100.000.000!' : null,
-                            errorStyle: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 12,
-                              height: 0.8, // Menaikkan posisi tanpa merusak box
+                              },
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                TextInputFormatter.withFunction((oldValue, newValue) {
+                                  final amount = ValidationHelper.parseRupiah(newValue.text);
+                                  if (amount > 100000000) {
+                                    if (!_showBudgetWarning) {
+                                      _budgetWarningTimer?.cancel();
+                                      setState(() => _showBudgetWarning = true);
+                                      _budgetWarningTimer = Timer(const Duration(seconds: 3), () {
+                                        if (mounted) setState(() => _showBudgetWarning = false);
+                                      });
+                                    }
+                                    // Mentokkan ke 100jt
+                                    return const TextEditingValue(
+                                      text: '100000000',
+                                      selection: TextSelection.collapsed(offset: 9),
+                                    );
+                                  }
+                                  return newValue;
+                                }),
+                              ],
+                              validator: (val) {
+                                if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
+                                  return 'Hanya menerima input angka';
+                                }
+                                return null;
+                              },
+                              decoration: const InputDecoration(
+                                prefixText: 'Rp ',
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
+                            if (_showBudgetWarning)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 0),
+                                child: Text(
+                                  'Max Rp 100.000.000!',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
 

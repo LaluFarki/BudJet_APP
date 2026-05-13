@@ -118,56 +118,67 @@ class DataDiriScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
-                    controller: textCtrl,
-                    obscureText: title.toLowerCase().contains('sandi'),
-                    onChanged: (val) {
-                      if (val.length < 20 && _showNameWarning) {
-                        setStateDialog(() => _showNameWarning = false);
-                      }
-                    },
-                    inputFormatters: [
-                      TextInputFormatter.withFunction((oldValue, newValue) {
-                        if (newValue.text.length > 20) {
-                          if (!_showNameWarning) {
-                            _nameWarningTimer?.cancel();
-                            setStateDialog(() => _showNameWarning = true);
-                            _nameWarningTimer = Timer(const Duration(seconds: 3), () {
-                              setStateDialog(() => _showNameWarning = false);
-                            });
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: textCtrl,
+                        obscureText: title.toLowerCase().contains('sandi'),
+                        onChanged: (val) {
+                          if (val.length < 20 && _showNameWarning) {
+                            setStateDialog(() => _showNameWarning = false);
                           }
-                          return oldValue;
-                        }
-                        return newValue;
-                      }),
+                        },
+                        inputFormatters: [
+                          TextInputFormatter.withFunction((oldValue, newValue) {
+                            if (newValue.text.length > 20) {
+                              if (!_showNameWarning) {
+                                _nameWarningTimer?.cancel();
+                                setStateDialog(() => _showNameWarning = true);
+                                _nameWarningTimer = Timer(const Duration(seconds: 3), () {
+                                  setStateDialog(() => _showNameWarning = false);
+                                });
+                              }
+                              return oldValue;
+                            }
+                            return newValue;
+                          }),
+                        ],
+                        decoration: InputDecoration(
+                          hintText: title,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 18,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: Colors.grey.shade200,
+                              width: 1.5,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: const BorderSide(
+                              color: AppColors.primaryGreen,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (isName && _showNameWarning)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4, left: 24),
+                          child: Text(
+                            'Maksimal 20 Karakter!',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                     ],
-                    decoration: InputDecoration(
-                      hintText: title,
-                      errorText: isName && _showNameWarning ? 'Maksimal 20 Karakter!' : null,
-                      errorStyle: const TextStyle(
-                        color: Colors.red,
-                        fontSize: 12,
-                        height: 0.8, // Menaikkan posisi tanpa merusak box
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 18,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide(
-                          color: Colors.grey.shade200,
-                          width: 1.5,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFD4F069),
-                          width: 2,
-                        ),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 28),
                   Row(

@@ -542,50 +542,63 @@ class AddTransactionScreen extends StatelessWidget {
                             color: Colors.grey.withValues(alpha: 0.1),
                           ),
                         ),
-                        child: Obx(() => TextFormField(
-                          controller: _titleController,
-                          onChanged: (val) {
-                            _titleText.value = val;
-                            if (val.length < 20 && _showTitleWarning.value) {
-                              _showTitleWarning.value = false;
-                            }
-                          },
-                          inputFormatters: [
-                            TextInputFormatter.withFunction((oldValue, newValue) {
-                              if (newValue.text.length > 20) {
-                                if (!_showTitleWarning.value) {
-                                  _titleWarningTimer?.cancel();
-                                  _showTitleWarning.value = true;
-                                  _titleWarningTimer = Timer(const Duration(seconds: 3), () {
-                                    _showTitleWarning.value = false;
-                                  });
+                        child: Obx(() => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextFormField(
+                              controller: _titleController,
+                              onChanged: (val) {
+                                _titleText.value = val;
+                                if (val.length < 20 && _showTitleWarning.value) {
+                                  _showTitleWarning.value = false;
                                 }
-                                return oldValue;
-                              }
-                              return newValue;
-                            }),
+                              },
+                              inputFormatters: [
+                                TextInputFormatter.withFunction((oldValue, newValue) {
+                                  if (newValue.text.length > 20) {
+                                    if (!_showTitleWarning.value) {
+                                      _titleWarningTimer?.cancel();
+                                      _showTitleWarning.value = true;
+                                      _titleWarningTimer = Timer(const Duration(seconds: 3), () {
+                                        _showTitleWarning.value = false;
+                                      });
+                                    }
+                                    return oldValue;
+                                  }
+                                  return newValue;
+                                }),
+                              ],
+                              decoration: const InputDecoration(
+                                hintText: 'Nama Pengeluaran',
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(vertical: 8),
+                                suffixIcon: Icon(
+                                  Icons.edit_outlined,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              validator: (val) =>
+                                  val == null || val.isEmpty ? 'Isi judul' : null,
+                            ),
+                            if (_showTitleWarning.value)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 0),
+                                child: Text(
+                                  'Maksimal 20 Karakter!',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
                           ],
-                          decoration: InputDecoration(
-                            hintText: 'Nama Pengeluaran',
-                            border: InputBorder.none,
-                            errorText: _showTitleWarning.value ? 'Maksimal 20 Karakter!' : null,
-                            errorStyle: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 12,
-                              height: 0.8, // Naikkan posisi tanpa merusak box
-                            ),
-                            suffixIcon: Icon(
-                              Icons.edit_outlined,
-                              color: Colors.grey,
-                              size: 20,
-                            ),
-                          ),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          validator: (val) =>
-                              val == null || val.isEmpty ? 'Isi judul' : null,
                         )),
                       ),
 
@@ -612,96 +625,109 @@ class AddTransactionScreen extends StatelessWidget {
                             color: Colors.grey.withValues(alpha: 0.1),
                           ),
                         ),
-                        child: Obx(() => TextFormField(
-                          controller: _amountController,
-                          keyboardType: TextInputType.number,
-                          onChanged: (val) {
-                            final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
-                            double parsed = double.tryParse(digits) ?? 0;
+                        child: Obx(() => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextFormField(
+                              controller: _amountController,
+                              keyboardType: TextInputType.number,
+                              onChanged: (val) {
+                                final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
+                                double parsed = double.tryParse(digits) ?? 0;
 
-                            if (parsed < 100000000 && _showNominalWarning.value) {
-                              _showNominalWarning.value = false;
-                            }
-
-                            final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
-
-                            if (sisaSaldo > 0 && parsed > sisaSaldo) {
-                              parsed = sisaSaldo.floorToDouble();
-
-                              final capped = NumberFormat(
-                                '#,###',
-                                'id_ID',
-                              ).format(parsed.toInt());
-
-                              _amountController.text = capped;
-                              _amountController.selection =
-                                  TextSelection.collapsed(
-                                    offset: capped.length,
-                                  );
-                            }
-
-                            _enteredAmount.value = parsed;
-                          },
-                          inputFormatters: [
-                            TextInputFormatter.withFunction((oldValue, newValue) {
-                              final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-                              final parsed = double.tryParse(digits) ?? 0;
-                              if (parsed > 100000000) {
-                                if (!_showNominalWarning.value) {
-                                  _nominalWarningTimer?.cancel();
-                                  _showNominalWarning.value = true;
-                                  _nominalWarningTimer = Timer(const Duration(seconds: 3), () {
-                                    _showNominalWarning.value = false;
-                                  });
+                                if (parsed < 100000000 && _showNominalWarning.value) {
+                                  _showNominalWarning.value = false;
                                 }
-                                return const TextEditingValue(
-                                  text: '100.000.000',
-                                  selection: TextSelection.collapsed(offset: 11),
+
+                                final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
+
+                                if (sisaSaldo > 0 && parsed > sisaSaldo) {
+                                  parsed = sisaSaldo.floorToDouble();
+
+                                  final capped = NumberFormat(
+                                    '#,###',
+                                    'id_ID',
+                                  ).format(parsed.toInt());
+
+                                  _amountController.text = capped;
+                                  _amountController.selection =
+                                      TextSelection.collapsed(
+                                        offset: capped.length,
+                                      );
+                                }
+
+                                _enteredAmount.value = parsed;
+                              },
+                              inputFormatters: [
+                                TextInputFormatter.withFunction((oldValue, newValue) {
+                                  final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+                                  final parsed = double.tryParse(digits) ?? 0;
+                                  if (parsed > 100000000) {
+                                    if (!_showNominalWarning.value) {
+                                      _nominalWarningTimer?.cancel();
+                                      _showNominalWarning.value = true;
+                                      _nominalWarningTimer = Timer(const Duration(seconds: 3), () {
+                                        _showNominalWarning.value = false;
+                                      });
+                                    }
+                                    return const TextEditingValue(
+                                      text: '100.000.000',
+                                      selection: TextSelection.collapsed(offset: 11),
+                                    );
+                                  }
+                                  return newValue;
+                                }),
+                              ],
+                              decoration: const InputDecoration(
+                                hintText: 'Nominal',
+                                prefixText: 'Rp ',
+                                prefixStyle: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: AppColors.textDark,
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(vertical: 8),
+                                suffixIcon: Icon(
+                                  Icons.edit_outlined,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              validator: (val) {
+                                if (val == null || val.isEmpty) {
+                                  return 'Isi nominal';
+                                }
+                                final cleanVal = val.replaceAll(
+                                  RegExp(r'[^0-9]'),
+                                  '',
                                 );
-                              }
-                              return newValue;
-                            }),
+
+                                if (double.tryParse(cleanVal) == null) {
+                                  return 'Angka tidak valid';
+                                }
+
+                                return null;
+                              },
+                            ),
+                            if (_showNominalWarning.value)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 0),
+                                child: Text(
+                                  'Max Rp 100.000.000!',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
                           ],
-                          decoration: InputDecoration(
-                            hintText: 'Nominal',
-                            prefixText: 'Rp ',
-                            prefixStyle: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: AppColors.textDark,
-                            ),
-                            border: InputBorder.none,
-                            errorText: _showNominalWarning.value ? 'Max Rp 100.000.000!' : null,
-                            errorStyle: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 12,
-                              height: 0.8, // Naikkan posisi tanpa merusak box
-                            ),
-                            suffixIcon: const Icon(
-                              Icons.edit_outlined,
-                              color: Colors.grey,
-                              size: 20,
-                            ),
-                          ),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return 'Isi nominal';
-                            }
-                            final cleanVal = val.replaceAll(
-                              RegExp(r'[^0-9]'),
-                              '',
-                            );
-
-                            if (double.tryParse(cleanVal) == null) {
-                              return 'Angka tidak valid';
-                            }
-
-                            return null;
-                          },
                         )),
                       ),
                       // Indikator sisa saldo real-time
