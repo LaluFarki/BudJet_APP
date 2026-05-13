@@ -992,16 +992,14 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                 ),
               ),
               if (_showCatWarning[i] ?? false)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4, bottom: 4),
-                  child: Center(
-                    child: Text(
-                      'Max Rp 100.000.000!',
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 0, bottom: 8, left: 12),
+                  child: Text(
+                    'Max Rp 100.000.000!',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -1121,20 +1119,29 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                       horizontal: 20,
                                       vertical: _showTotalBudgetWarning ? 12 : 15,
                                     ),
-                                    border: InputBorder.none,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                      borderSide: BorderSide.none,
+                                    ),
                                   ),
                                 ),
                                 if (_showTotalBudgetWarning)
                                   const Padding(
-                                    padding: EdgeInsets.only(top: 4, bottom: 8),
-                                    child: Center(
-                                      child: Text(
-                                        'Max Rp 100.000.000!',
-                                        style: TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                    padding: EdgeInsets.only(top: 0, bottom: 16, left: 20),
+                                    child: Text(
+                                      'Max Rp 100.000.000!',
+                                      style: TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),

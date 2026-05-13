@@ -521,19 +521,10 @@ class AddTransactionScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Nama Pengeluaran',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
-                          vertical: 8,
+                          vertical: 12,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -569,10 +560,18 @@ class AddTransactionScreen extends StatelessWidget {
                                 }),
                               ],
                               decoration: const InputDecoration(
-                                hintText: 'Nama Pengeluaran',
+                                labelText: 'Nama Pengeluaran',
+                                labelStyle: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                                floatingLabelStyle: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                                 border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(vertical: 8),
                                 suffixIcon: Icon(
                                   Icons.edit_outlined,
                                   color: Colors.grey,
@@ -604,19 +603,10 @@ class AddTransactionScreen extends StatelessWidget {
 
                       const SizedBox(height: 16),
 
-                      const Text(
-                        'Nominal',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
-                          vertical: 8,
+                          vertical: 12,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -675,11 +665,28 @@ class AddTransactionScreen extends StatelessWidget {
                                       selection: TextSelection.collapsed(offset: 11),
                                     );
                                   }
-                                  return newValue;
+                                  if (digits.isEmpty) {
+                                    return const TextEditingValue(text: '');
+                                  }
+                                  final formatted = NumberFormat('#,###', 'id_ID').format(int.parse(digits)).replaceAll(',', '.');
+                                  return TextEditingValue(
+                                    text: formatted,
+                                    selection: TextSelection.collapsed(offset: formatted.length),
+                                  );
                                 }),
                               ],
                               decoration: const InputDecoration(
-                                hintText: 'Nominal',
+                                labelText: 'Nominal',
+                                labelStyle: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                                floatingLabelStyle: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                                 prefixText: 'Rp ',
                                 prefixStyle: TextStyle(
                                   fontWeight: FontWeight.bold,
@@ -687,8 +694,6 @@ class AddTransactionScreen extends StatelessWidget {
                                   color: AppColors.textDark,
                                 ),
                                 border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(vertical: 8),
                                 suffixIcon: Icon(
                                   Icons.edit_outlined,
                                   color: Colors.grey,
@@ -773,7 +778,7 @@ class AddTransactionScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
-                          vertical: 8,
+                          vertical: 12,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -930,7 +935,7 @@ class AddTransactionScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 20,
-                            vertical: 8,
+                            vertical: 12,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white,
