@@ -39,19 +39,7 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
     super.initState();
     isSelected = List.generate(kategoriList.length, (_) => false);
 
-    _budgetController.addListener(() {
-      final raw = _budgetController.text.replaceAll('.', '');
-      if (raw.isEmpty) return;
-      final value = int.tryParse(raw);
-      if (value == null) return;
-      final formatted = _formatter.format(value).replaceAll(',', '.');
-      if (formatted != _budgetController.text) {
-        _budgetController.value = TextEditingValue(
-          text: formatted,
-          selection: TextSelection.collapsed(offset: formatted.length),
-        );
-      }
-    });
+    // Budget controller listener removed, handled by RupiahInputFormatter
   }
 
   @override
@@ -365,10 +353,9 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                                 }
                               },
                               inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                TextInputFormatter.withFunction((oldValue, newValue) {
-                                  final amount = ValidationHelper.parseRupiah(newValue.text);
-                                  if (amount > 100000000) {
+                                RupiahInputFormatter(
+                                  max: 100000000,
+                                  onMaxExceeded: () {
                                     if (!_showBudgetWarning) {
                                       _budgetWarningTimer?.cancel();
                                       setState(() => _showBudgetWarning = true);
@@ -376,13 +363,8 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                                         if (mounted) setState(() => _showBudgetWarning = false);
                                       });
                                     }
-                                    return const TextEditingValue(
-                                      text: '100.000.000',
-                                      selection: TextSelection.collapsed(offset: 11),
-                                    );
-                                  }
-                                  return newValue;
-                                }),
+                                  },
+                                ),
                               ],
                               decoration: const InputDecoration(
                                 prefixText: 'Rp ',

@@ -113,19 +113,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     }
   }
 
-  void _formatRupiah(TextEditingController controller, String value) {
-    // Hanya ambil angka
-    final angka = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (angka.isEmpty) {
-      controller.clear();
-      return;
-    }
-    final formatted = _currencyFormat.format(int.parse(angka));
-    controller.value = TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
+  // _formatRupiah dihapus karena menggunakan RupiahInputFormatter
 
   IconData _getIcon(String kategori) {
     return AppHelpers.getCategoryIcon(kategori);
@@ -423,13 +411,11 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                                   if (amount < 100000000 && (_showNominalWarning[index] ?? false)) {
                                     setState(() => _showNominalWarning[index] = false);
                                   }
-                                  _formatRupiah(controllers[index], value);
                                 },
                                 inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  TextInputFormatter.withFunction((oldValue, newValue) {
-                                    final amount = ValidationHelper.parseRupiah(newValue.text);
-                                    if (amount > 100000000) {
+                                  RupiahInputFormatter(
+                                    max: 100000000,
+                                    onMaxExceeded: () {
                                       if (!(_showNominalWarning[index] ?? false)) {
                                         _nominalWarningTimers[index]?.cancel();
                                         setState(() => _showNominalWarning[index] = true);
@@ -437,13 +423,8 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                                           if (mounted) setState(() => _showNominalWarning[index] = false);
                                         });
                                       }
-                                      return const TextEditingValue(
-                                        text: 'Rp 100.000.000',
-                                        selection: TextSelection.collapsed(offset: 14),
-                                      );
-                                    }
-                                    return newValue;
-                                  }),
+                                    },
+                                  ),
                                 ],
                                 decoration: InputDecoration(
                                   hintText:

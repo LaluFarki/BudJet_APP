@@ -85,7 +85,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
         final catsRaw = data['categories'] ?? [];
         _categories = List<Map<String, dynamic>>.from(catsRaw);
 
-        _formatRupiah(_totalBudgetCtrl, _budgetBulanan.toStringAsFixed(0));
+        _totalBudgetCtrl.text = NumberFormat('#,###', 'id_ID').format(_budgetBulanan).replaceAll(',', '.');
 
         _catControllers = _categories.map((c) {
           final ctrl = TextEditingController();
@@ -102,7 +102,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
           final sisaSesuaiPeriode =
               (sisaBulanan < 0 ? 0 : sisaBulanan) / divider;
 
-          _formatRupiah(ctrl, sisaSesuaiPeriode.toStringAsFixed(0));
+          ctrl.text = NumberFormat('#,###', 'id_ID').format(sisaSesuaiPeriode).replaceAll(',', '.');
 
           ctrl.addListener(() {
             _hasChanged = true;
@@ -126,22 +126,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
     return double.tryParse(angka) ?? 0;
   }
 
-  void _formatRupiah(TextEditingController controller, String value) {
-    // Hanya ambil angka
-    final angka = value.replaceAll(RegExp(r'[^0-9]'), '');
-
-    if (angka.isEmpty) {
-      controller.clear();
-      return;
-    }
-
-    final formatted = _currencyFmt.format(int.parse(angka));
-
-    controller.value = TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
+  // _formatRupiah removed, handled by RupiahInputFormatter and prefixText
 
   bool _matchKategori(String txKategori, String budgetKat) {
     final txLower = txKategori.toLowerCase();
@@ -531,7 +516,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                               });
 
                               final ctrl = TextEditingController();
-                              _formatRupiah(ctrl, '0');
+                              ctrl.text = '0';
                               ctrl.addListener(() {
                                 _hasChanged = true;
                                 setState(() {});
@@ -949,15 +934,13 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                   if (amount < 100000000 && (_showCatWarning[i] ?? false)) {
                     setState(() => _showCatWarning[i] = false);
                   }
-                  _formatRupiah(_catControllers[i], val);
+                  // Formatting handled by RupiahInputFormatter
                   setState(() { _hasChanged = true; });
                 },
                 inputFormatters: [
-                  TextInputFormatter.withFunction((oldValue, newValue) {
-                    final rawDigits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-                    if (rawDigits.isEmpty) return const TextEditingValue(text: '');
-                    final amount = int.tryParse(rawDigits) ?? 0;
-                    if (amount > 100000000) {
+                  RupiahInputFormatter(
+                    max: 100000000,
+                    onMaxExceeded: () {
                       if (!(_showCatWarning[i] ?? false)) {
                         _catWarningTimers[i]?.cancel();
                         setState(() => _showCatWarning[i] = true);
@@ -965,21 +948,12 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                           if (mounted) setState(() => _showCatWarning[i] = false);
                         });
                       }
-                      const cappedText = 'Rp 100.000.000';
-                      return const TextEditingValue(
-                        text: cappedText,
-                        selection: TextSelection.collapsed(offset: 14),
-                      );
-                    }
-                    final formatted = _currencyFmt.format(amount);
-                    return TextEditingValue(
-                      text: formatted,
-                      selection: TextSelection.collapsed(offset: formatted.length),
-                    );
-                  }),
+                    },
+                  ),
                 ],
                 decoration: InputDecoration(
                   hintText: 'Budget tersisa',
+                  prefixText: 'Rp ',
                   helperText:
                       'Sisa budget ${catName.toLowerCase()} per ${_periodSuffix(period)}',
                   helperStyle: const TextStyle(fontSize: 12),
@@ -1085,11 +1059,9 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                     });
                                   },
                                   inputFormatters: [
-                                    TextInputFormatter.withFunction((oldValue, newValue) {
-                                      final rawDigits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-                                      if (rawDigits.isEmpty) return const TextEditingValue(text: '');
-                                      final amount = int.tryParse(rawDigits) ?? 0;
-                                      if (amount > 100000000) {
+                                    RupiahInputFormatter(
+                                      max: 100000000,
+                                      onMaxExceeded: () {
                                         if (!_showTotalBudgetWarning) {
                                           _totalBudgetWarningTimer?.cancel();
                                           setState(() => _showTotalBudgetWarning = true);
@@ -1097,23 +1069,15 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                             if (mounted) setState(() => _showTotalBudgetWarning = false);
                                           });
                                         }
-                                        const cappedText = 'Rp 100.000.000';
-                                        return const TextEditingValue(
-                                          text: cappedText,
-                                          selection: TextSelection.collapsed(offset: 14),
-                                        );
-                                      }
-                                      final formatted = _currencyFmt.format(amount);
-                                      return TextEditingValue(
-                                        text: formatted,
-                                        selection: TextSelection.collapsed(offset: formatted.length),
-                                      );
-                                    }),
+                                      },
+                                    ),
                                   ],
                                   style: const TextStyle(fontWeight: FontWeight.bold),
                                   decoration: InputDecoration(
-                                    hintText: 'Budget Anda',
-                                    filled: true,
+                                      hintText: 'Budget Anda',
+                                      prefixText: 'Rp ',
+                                      prefixStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                      filled: true,
                                     fillColor: Colors.white,
                                     contentPadding: EdgeInsets.symmetric(
                                       horizontal: 20,

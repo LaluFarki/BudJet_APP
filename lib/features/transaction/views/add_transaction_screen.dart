@@ -11,21 +11,7 @@ import '../../../core/constants/app_colors.dart';
 import '../controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 
-class _ThousandsSeparatorFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll('.', '');
-    if (digits.isEmpty) return newValue.copyWith(text: '');
-    final formatted = NumberFormat('#,###', 'id_ID').format(int.parse(digits));
-    return newValue.copyWith(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
+
 
 class AddTransactionScreen extends StatelessWidget {
   // Load kategori dari Firestore (budget user)
@@ -649,10 +635,9 @@ class AddTransactionScreen extends StatelessWidget {
                                 _enteredAmount.value = parsed;
                               },
                               inputFormatters: [
-                                TextInputFormatter.withFunction((oldValue, newValue) {
-                                  final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-                                  final parsed = double.tryParse(digits) ?? 0;
-                                  if (parsed > 100000000) {
+                                RupiahInputFormatter(
+                                  max: 100000000,
+                                  onMaxExceeded: () {
                                     if (!_showNominalWarning.value) {
                                       _nominalWarningTimer?.cancel();
                                       _showNominalWarning.value = true;
@@ -660,20 +645,8 @@ class AddTransactionScreen extends StatelessWidget {
                                         _showNominalWarning.value = false;
                                       });
                                     }
-                                    return const TextEditingValue(
-                                      text: '100.000.000',
-                                      selection: TextSelection.collapsed(offset: 11),
-                                    );
-                                  }
-                                  if (digits.isEmpty) {
-                                    return const TextEditingValue(text: '');
-                                  }
-                                  final formatted = NumberFormat('#,###', 'id_ID').format(int.parse(digits)).replaceAll(',', '.');
-                                  return TextEditingValue(
-                                    text: formatted,
-                                    selection: TextSelection.collapsed(offset: formatted.length),
-                                  );
-                                }),
+                                  },
+                                ),
                               ],
                               decoration: const InputDecoration(
                                 labelText: 'Nominal',
