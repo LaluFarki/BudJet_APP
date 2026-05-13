@@ -1,14 +1,17 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../input_budget/layar/layar_form_anggaran.dart';
 import '../../profile/controllers/profile_controller.dart';
+import '../../../core/utils/validation_helper.dart';
 
 /// Layar setup profil awal yang muncul setelah "Get Started".
 /// User memilih nama dan foto profil (avatar cartoon atau galeri).
@@ -24,6 +27,8 @@ class LayarProfilSetup extends StatefulWidget {
 class _LayarProfilSetupState extends State<LayarProfilSetup> {
   final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _showNameWarning = false;
+  Timer? _nameWarningTimer;
 
   // Index avatar yang dipilih (-1 = belum pilih, 0-4 = avatar, 99 = galeri)
   int _selectedAvatarIndex = -1;
@@ -46,6 +51,7 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
   @override
   void dispose() {
     _nameController.dispose();
+    _nameWarningTimer?.cancel();
     super.dispose();
   }
 
@@ -272,7 +278,6 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
 
                 const SizedBox(height: 28),
 
-                // ── Input Nama ──
                 const Text(
                   'Nama Kamu',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
@@ -293,8 +298,34 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                   child: TextFormField(
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
+                    onChanged: (val) {
+                      if (val.length < 20 && _showNameWarning) {
+                        setState(() => _showNameWarning = false);
+                      }
+                    },
+                    inputFormatters: [
+                      TextInputFormatter.withFunction((oldValue, newValue) {
+                        if (newValue.text.length > 20) {
+                          if (!_showNameWarning) {
+                            _nameWarningTimer?.cancel();
+                            setState(() => _showNameWarning = true);
+                            _nameWarningTimer = Timer(const Duration(seconds: 3), () {
+                              if (mounted) setState(() => _showNameWarning = false);
+                            });
+                          }
+                          return oldValue;
+                        }
+                        return newValue;
+                      }),
+                    ],
                     decoration: InputDecoration(
                       hintText: 'Masukkan nama kamu...',
+                      errorText: _showNameWarning ? 'Maksimal 20 Karakter!' : null,
+                      errorStyle: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 12,
+                        height: 0.8, // Menaikkan sedikit tanpa merusak box
+                      ),
                       hintStyle: TextStyle(color: Colors.grey.shade400),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -312,8 +343,8 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                       if (val == null || val.trim().isEmpty) {
                         return 'Nama tidak boleh kosong';
                       }
-                      if (val.trim().length < 2) {
-                        return 'Nama terlalu pendek';
+                      if (val.trim().length > 20) {
+                        return 'Maksimal 20 Karakter!';
                       }
                       return null;
                     },

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import 'layar_budget_kategori.dart';
 import '../../../../core/utils/app_helpers.dart';
+import '../../../../core/utils/validation_helper.dart';
 
 class LayarFormAnggaran extends StatefulWidget {
   const LayarFormAnggaran({super.key});
@@ -18,6 +20,8 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
   DateTime? selectedDate;
   final TextEditingController _budgetController = TextEditingController();
   final NumberFormat _formatter = NumberFormat('#,###', 'id_ID');
+  bool _showBudgetWarning = false;
+  Timer? _budgetWarningTimer;
 
   final int totalStep = 3;
 
@@ -53,6 +57,7 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
   @override
   void dispose() {
     _budgetController.dispose();
+    _budgetWarningTimer?.cancel();
     super.dispose();
   }
 
@@ -76,31 +81,77 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
     final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tambah Kategori'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Masukkan kategori'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final nama = controller.text.trim();
-              if (nama.isNotEmpty && !kategoriList.contains(nama)) {
-                setState(() {
-                  kategoriList.add(nama);
-                  isSelected.add(true);
-                });
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Tambah'),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          bool showNameWarning = false;
+          Timer? nameWarningTimer;
+          return AlertDialog(
+            title: const Text('Tambah Kategori'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Nama Kategori',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                TextField(
+                  controller: controller,
+                  onChanged: (val) {
+                    if (val.length < 20 && showNameWarning) {
+                      setDialogState(() => showNameWarning = false);
+                    }
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Masukkan kategori',
+                    errorText: showNameWarning ? 'Maksimal 20 Karakter!' : null,
+                    errorStyle: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 12,
+                      height: 0.8, // Menaikkan posisi teks tanpa merusak box
+                    ),
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                    TextInputFormatter.withFunction((oldValue, newValue) {
+                      if (newValue.text.length > 20) {
+                        if (!showNameWarning) {
+                          nameWarningTimer?.cancel();
+                          setDialogState(() => showNameWarning = true);
+                          nameWarningTimer = Timer(const Duration(seconds: 3), () {
+                            setDialogState(() => showNameWarning = false);
+                          });
+                        }
+                        return oldValue;
+                      }
+                      return newValue;
+                    }),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final nama = controller.text.trim();
+                  if (ValidationHelper.isLengthExceeded(nama, 20)) return;
+                  if (nama.isNotEmpty && !kategoriList.contains(nama)) {
+                    setState(() {
+                      kategoriList.add(nama);
+                      isSelected.add(true);
+                    });
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text('Tambah'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -203,20 +254,50 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                         child: TextFormField(
                           controller: _budgetController,
                           keyboardType: TextInputType.number,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          onChanged: (val) {
+                            final amount = ValidationHelper.parseRupiah(val);
+                            if (amount < 100000000 && _showBudgetWarning) {
+                              setState(() => _showBudgetWarning = false);
+                            }
+                          },
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
+                            TextInputFormatter.withFunction((oldValue, newValue) {
+                              final amount = ValidationHelper.parseRupiah(newValue.text);
+                              if (amount > 100000000) {
+                                if (!_showBudgetWarning) {
+                                  _budgetWarningTimer?.cancel();
+                                  setState(() => _showBudgetWarning = true);
+                                  _budgetWarningTimer = Timer(const Duration(seconds: 3), () {
+                                    if (mounted) setState(() => _showBudgetWarning = false);
+                                  });
+                                }
+                                // Mentokkan ke 100jt
+                                return const TextEditingValue(
+                                  text: '100000000',
+                                  selection: TextSelection.collapsed(offset: 9),
+                                );
+                              }
+                              return newValue;
+                            }),
                           ],
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: (val) {
                             if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
                               return 'Hanya menerima input angka';
                             }
                             return null;
                           },
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             prefixText: 'Rp ',
                             border: InputBorder.none,
                             isDense: true,
+                            errorText: _showBudgetWarning ? 'Max Rp 100.000.000!' : null,
+                            errorStyle: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                              height: 0.8, // Menaikkan posisi tanpa merusak box
+                            ),
                           ),
                         ),
                       ),

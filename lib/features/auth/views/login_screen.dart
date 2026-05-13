@@ -187,18 +187,31 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: _authController.isLoading.value
                             ? null
                             : () {
-                                if (_emailController.text.isNotEmpty &&
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                
+                                if (_emailController.text.trim().isNotEmpty &&
                                     _passwordController.text.isNotEmpty) {
                                   _authController.loginWithEmail(
-                                    _emailController.text,
+                                    _emailController.text.trim(),
                                     _passwordController.text,
                                   );
                                 } else {
-                                  Get.snackbar('Error', 'Email dan Password harus diisi');
+                                  // Refresh snackbar instead of blocking
+                                  Get.closeAllSnackbars();
+                                  Get.snackbar(
+                                    'Peringatan', 
+                                    'Email dan Password harus diisi',
+                                    snackPosition: SnackPosition.TOP,
+                                    backgroundColor: const Color(0xFFFFECEC),
+                                    colorText: const Color(0xFF8B0000),
+                                    margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                                  );
                                 }
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFC8E669),
+                          disabledBackgroundColor: const Color(0xFFC8E669).withValues(alpha: 0.6),
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -210,7 +223,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                ),
                               )
                             : const Text(
                                 'Masuk →',

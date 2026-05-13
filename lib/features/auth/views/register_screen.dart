@@ -191,10 +191,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         onPressed: _authController.isLoading.value
                             ? null
                             : () {
+                                FocusManager.instance.primaryFocus?.unfocus();
+
                                 if (_emailController.text.trim().isEmpty ||
                                     _passwordController.text.isEmpty ||
                                     _confirmPasswordController.text.isEmpty) {
-                                  Get.snackbar('Error', 'Semua kolom harus diisi');
+                                  Get.closeAllSnackbars();
+                                  Get.snackbar('Peringatan', 'Semua kolom harus diisi');
                                   return;
                                 }
 
@@ -202,7 +205,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 String confirmPwd = _confirmPasswordController.text;
 
                                 if (pwd != confirmPwd) {
-                                  Get.snackbar('Error', 'Password dan Konfirmasi Password tidak cocok');
+                                  Get.closeAllSnackbars();
+                                  Get.snackbar('Peringatan', 'Password dan Konfirmasi Password tidak cocok');
                                   return;
                                 }
 
@@ -210,6 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     !pwd.contains(RegExp(r'[A-Z]')) ||
                                     !pwd.contains(RegExp(r'[a-z]')) ||
                                     !pwd.contains(RegExp(r'[0-9]'))) {
+                                  Get.closeAllSnackbars();
                                   Get.snackbar(
                                     'Peringatan',
                                     'Password minimal 8 karakter, harus terdiri dari huruf besar, huruf kecil, dan angka.',
@@ -226,6 +231,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFC8E669),
+                          disabledBackgroundColor: const Color(0xFFC8E669).withValues(alpha: 0.6),
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -233,7 +239,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                         child: _authController.isLoading.value
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
+                            ? const SizedBox(
+                                height: 20, 
+                                width: 20, 
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                ),
+                              )
                             : const Text('Daftar →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       )),
                       const SizedBox(height: 30),

@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/validation_helper.dart';
 import '../controllers/profile_controller.dart';
 
 class DataDiriScreen extends StatelessWidget {
@@ -88,134 +91,173 @@ class DataDiriScreen extends StatelessWidget {
       textCtrl.clear();
     }
 
+    bool _showNameWarning = false;
+    Timer? _nameWarningTimer;
+
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: Colors.white,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: textCtrl,
-                obscureText: title.toLowerCase().contains('sandi'),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: AppColors.textDark,
-                ),
-                decoration: InputDecoration(
-                  labelText: title,
-                  labelStyle: const TextStyle(
-                    color: Color(0xFF949BA5),
-                    fontSize: 16,
-                    fontWeight: FontWeight.normal,
-                  ),
-                  floatingLabelBehavior: FloatingLabelBehavior.always,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 18,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide(
-                      color: Colors.grey.shade200,
-                      width: 1.5,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFD4F069),
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-              Row(
+        child: StatefulBuilder(
+          builder: (context, setStateDialog) {
+            final isName = title.toLowerCase() == 'nama';
+
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textDark,
-                        side: BorderSide(
-                          color: Colors.grey.shade300,
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: textCtrl,
+                    obscureText: title.toLowerCase().contains('sandi'),
+                    onChanged: (val) {
+                      if (val.length < 20 && _showNameWarning) {
+                        setStateDialog(() => _showNameWarning = false);
+                      }
+                    },
+                    inputFormatters: [
+                      TextInputFormatter.withFunction((oldValue, newValue) {
+                        if (newValue.text.length > 20) {
+                          if (!_showNameWarning) {
+                            _nameWarningTimer?.cancel();
+                            setStateDialog(() => _showNameWarning = true);
+                            _nameWarningTimer = Timer(const Duration(seconds: 3), () {
+                              setStateDialog(() => _showNameWarning = false);
+                            });
+                          }
+                          return oldValue;
+                        }
+                        return newValue;
+                      }),
+                    ],
+                    decoration: InputDecoration(
+                      hintText: title,
+                      errorText: isName && _showNameWarning ? 'Maksimal 20 Karakter!' : null,
+                      errorStyle: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 12,
+                        height: 0.8, // Menaikkan posisi tanpa merusak box
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 18,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide(
+                          color: Colors.grey.shade200,
                           width: 1.5,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(100),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text(
-                        'Kembali',
-                        style: TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFD4F069),
+                          width: 2,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(100),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFFD4F069,
-                            ).withValues(alpha: 0.5),
-                            blurRadius: 15,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 5),
+                  const SizedBox(height: 28),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Get.back(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textDark,
+                            side: BorderSide(
+                              color: Colors.grey.shade300,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                        ],
+                          child: const Text(
+                            'Kembali',
+                            style: TextStyle(
+                              color: Color(0xFF6B7280),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
                       ),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (textCtrl.text.trim().isNotEmpty) {
-                            onSave(textCtrl.text.trim());
-                            Get.back(); // tutup pop up edit
-                            _showSuccessDialog('$title Berhasil Dirubah');
-                          } else {
-                            Get.snackbar(
-                              'Error',
-                              '$title tidak boleh kosong',
-                              snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFD4F069),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(100),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFFD4F069,
+                                ).withValues(alpha: 0.5),
+                                blurRadius: 15,
+                                spreadRadius: 2,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text(
-                          'Simpan',
-                          style: TextStyle(
-                            color: AppColors.textDark,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (textCtrl.text.trim().isEmpty) {
+                                Get.snackbar(
+                                  'Error',
+                                  '$title tidak boleh kosong',
+                                  snackPosition: SnackPosition.TOP,
+                                  margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                                );
+                                return;
+                              }
+
+                              if (isName && ValidationHelper.isLengthExceeded(textCtrl.text, 20)) {
+                                return; // Block save if invalid
+                              }
+
+                              onSave(textCtrl.text.trim());
+                              Get.back(); // tutup pop up edit
+                              _showSuccessDialog('$title Berhasil Dirubah');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFD4F069),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(100),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: const Text(
+                              'Simpan',
+                              style: TextStyle(
+                                color: AppColors.textDark,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

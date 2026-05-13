@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../../transaction/controllers/transaction_controller.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_helpers.dart';
+import '../../../core/utils/validation_helper.dart';
 
 class EditBudgetScreen extends StatefulWidget {
   const EditBudgetScreen({super.key});
@@ -37,6 +39,10 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
   final TextEditingController _totalBudgetCtrl = TextEditingController();
   List<TextEditingController> _catControllers = [];
+  bool _showTotalBudgetWarning = false;
+  Timer? _totalBudgetWarningTimer;
+  final Map<int, bool> _showCatWarning = {};
+  final Map<int, Timer?> _catWarningTimers = {};
 
   @override
   void initState() {
@@ -308,6 +314,8 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   void _showAddCategoryDialog() {
     final TextEditingController nameCtrl = TextEditingController();
     String selectedPeriod = 'monthly';
+    bool showNameWarning = false;
+    Timer? nameWarningTimer;
 
     Get.dialog(
       StatefulBuilder(
@@ -328,18 +336,51 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
                   const SizedBox(height: 16),
 
-                  TextField(
-                    controller: nameCtrl,
-                    decoration: InputDecoration(
-                      hintText: 'Nama kategori',
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                      const Text(
+                        'Nama kategori',
+                        style: TextStyle(fontWeight: FontWeight.w600),
                       ),
-                    ),
-                  ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: nameCtrl,
+                        onChanged: (val) {
+                          if (val.length < 20 && showNameWarning) {
+                            setDialogState(() => showNameWarning = false);
+                          }
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Nama kategori',
+                          helperText: 'Hanya huruf dan spasi',
+                          errorText: showNameWarning ? 'Maksimal 20 Karakter!' : null,
+                          errorStyle: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                            height: 0.8, // Naikkan posisi tanpa merusak box
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                          TextInputFormatter.withFunction((oldValue, newValue) {
+                            if (newValue.text.length > 20) {
+                              if (!showNameWarning) {
+                                nameWarningTimer?.cancel();
+                                setDialogState(() => showNameWarning = true);
+                                nameWarningTimer = Timer(const Duration(seconds: 3), () {
+                                  setDialogState(() => showNameWarning = false);
+                                });
+                              }
+                              return oldValue;
+                            }
+                            return newValue;
+                          }),
+                        ],
+                      ),
 
                   const SizedBox(height: 16),
 
@@ -850,25 +891,53 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
           const SizedBox(height: 12),
 
+          const Text(
+            'Budget tersisa',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
           TextFormField(
             controller: _catControllers[i],
             keyboardType: TextInputType.number,
+            onChanged: (val) {
+              final amount = ValidationHelper.parseRupiah(val);
+              if (amount < 100000000 && (_showCatWarning[i] ?? false)) {
+                setState(() => _showCatWarning[i] = false);
+              }
+              _formatRupiah(_catControllers[i], val);
+              setState(() { _hasChanged = true; });
+            },
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
+              TextInputFormatter.withFunction((oldValue, newValue) {
+                final amount = ValidationHelper.parseRupiah(newValue.text);
+                if (amount > 100000000) {
+                  if (!(_showCatWarning[i] ?? false)) {
+                    _catWarningTimers[i]?.cancel();
+                    setState(() => _showCatWarning[i] = true);
+                    _catWarningTimers[i] = Timer(const Duration(seconds: 3), () {
+                      if (mounted) setState(() => _showCatWarning[i] = false);
+                    });
+                  }
+                  return const TextEditingValue(
+                    text: '100.000.000',
+                    selection: TextSelection.collapsed(offset: 11),
+                  );
+                }
+                return newValue;
+              }),
             ],
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            validator: (val) {
-              if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
-                return 'Hanya menerima input angka';
-              }
-              return null;
-            },
-            onChanged: (val) => _formatRupiah(_catControllers[i], val),
             decoration: InputDecoration(
               hintText: 'Budget tersisa',
               helperText:
-                  'Nominal ini adalah sisa budget ${catName.toLowerCase()} per ${_periodSuffix(period)}',
+                  'Sisa budget ${catName.toLowerCase()} per ${_periodSuffix(period)}',
               helperStyle: const TextStyle(fontSize: 12),
+              errorText: (_showCatWarning[i] ?? false) ? 'Max Rp 100.000.000!' : null,
+              errorStyle: const TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+                height: 0.8, // Naikkan posisi tanpa merusak box
+              ),
               filled: true,
               fillColor: const Color(0xFFF1F3F6),
               border: OutlineInputBorder(
@@ -926,40 +995,71 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                         children: [
                           const Text(
                             'Budget Anda',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textDark,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w600),
                           ),
-                          const SizedBox(height: 10),
-                          TextFormField(
-                            controller: _totalBudgetCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
-                            validator: (val) {
-                              if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
-                                return 'Hanya menerima input angka';
-                              }
-                              return null;
-                            },
-                            onChanged: (val) =>
-                                _formatRupiah(_totalBudgetCtrl, val),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                            decoration: InputDecoration(
-                              hintText: 'Budget Anda',
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 15,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                borderSide: BorderSide.none,
+                          const SizedBox(height: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 10,
+                                ),
+                              ],
+                            ),
+                            child: TextFormField(
+                              controller: _totalBudgetCtrl,
+                              keyboardType: TextInputType.number,
+                              onChanged: (val) {
+                                final amount = ValidationHelper.parseRupiah(val);
+                                if (amount < 100000000 && _showTotalBudgetWarning) {
+                                  setState(() => _showTotalBudgetWarning = false);
+                                }
+                                setState(() {
+                                  _hasChanged = true;
+                                });
+                              },
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                TextInputFormatter.withFunction((oldValue, newValue) {
+                                  final amount = ValidationHelper.parseRupiah(newValue.text);
+                                  if (amount > 100000000) {
+                                    if (!_showTotalBudgetWarning) {
+                                      _totalBudgetWarningTimer?.cancel();
+                                      setState(() => _showTotalBudgetWarning = true);
+                                      _totalBudgetWarningTimer = Timer(const Duration(seconds: 3), () {
+                                        if (mounted) setState(() => _showTotalBudgetWarning = false);
+                                      });
+                                    }
+                                    return const TextEditingValue(
+                                      text: '100.000.000',
+                                      selection: TextSelection.collapsed(offset: 11),
+                                    );
+                                  }
+                                  return newValue;
+                                }),
+                              ],
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              decoration: InputDecoration(
+                                hintText: 'Budget Anda',
+                                filled: true,
+                                fillColor: Colors.white,
+                                errorText: _showTotalBudgetWarning ? 'Max Rp 100.000.000!' : null,
+                                errorStyle: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                  height: 0.8, // Naikkan posisi tanpa merusak box
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 15,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
                               ),
                             ),
                           ),
