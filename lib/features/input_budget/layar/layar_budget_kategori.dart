@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +7,7 @@ import 'package:budjet/features/algoritma_pembagian/smart_budget_engine.dart';
 import 'package:budjet/features/algoritma_pembagian/smart_budget_model.dart';
 import 'layar_analisis_budget.dart';
 import '../../../../core/utils/app_helpers.dart';
+import '../../../../core/utils/validation_helper.dart';
 
 class LayarBudgetKategori extends StatefulWidget {
   final double budgetBulanan;
@@ -26,6 +28,8 @@ class LayarBudgetKategori extends StatefulWidget {
 class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   late List<TextEditingController> controllers;
   late List<String> periodeList;
+  final Map<int, bool> _showNominalWarning = {};
+  final Map<int, Timer?> _nominalWarningTimers = {};
 
   final SmartBudgetEngine _engine = SmartBudgetEngine();
 
@@ -109,19 +113,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     }
   }
 
-  void _formatRupiah(TextEditingController controller, String value) {
-    // Hanya ambil angka
-    final angka = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (angka.isEmpty) {
-      controller.clear();
-      return;
-    }
-    final formatted = _currencyFormat.format(int.parse(angka));
-    controller.value = TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
+  // _formatRupiah dihapus karena menggunakan RupiahInputFormatter
 
   IconData _getIcon(String kategori) {
     return AppHelpers.getCategoryIcon(kategori);
@@ -403,36 +395,64 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-
-                          TextFormField(
-                            controller: controllers[index],
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
-                            validator: (val) {
-                              if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
-                                return 'Hanya menerima input angka';
-                              }
-                              return null;
-                            },
-                            onChanged: (value) =>
-                                _formatRupiah(controllers[index], value),
-                            decoration: InputDecoration(
-                              hintText:
-                                  'Nominal per ${periodeList[index].toLowerCase()}',
-                              helperText:
-                                  'Jatah ${kategori.toLowerCase()} per ${periodeList[index].toLowerCase()}',
-                              helperStyle: const TextStyle(fontSize: 12),
-                              filled: true,
-                              fillColor: const Color(0xFFF1F3F6),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
+                          const Text(
+                            'Nominal',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          SizedBox(height: (_showNominalWarning[index] ?? false) ? 4 : 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextFormField(
+                                controller: controllers[index],
+                                keyboardType: TextInputType.number,
+                                onChanged: (value) {
+                                  final amount = ValidationHelper.parseRupiah(value);
+                                  if (amount < 100000000 && (_showNominalWarning[index] ?? false)) {
+                                    setState(() => _showNominalWarning[index] = false);
+                                  }
+                                },
+                                inputFormatters: [
+                                  RupiahInputFormatter(
+                                    max: 100000000,
+                                    onMaxExceeded: () {
+                                      if (!(_showNominalWarning[index] ?? false)) {
+                                        _nominalWarningTimers[index]?.cancel();
+                                        setState(() => _showNominalWarning[index] = true);
+                                        _nominalWarningTimers[index] = Timer(const Duration(milliseconds: 2200), () {
+                                          if (mounted) setState(() => _showNominalWarning[index] = false);
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ],
+                                decoration: InputDecoration(
+                                  hintText:
+                                      'Nominal per ${periodeList[index].toLowerCase()}',
+                                  helperText:
+                                      'Jatah ${kategori.toLowerCase()} per ${periodeList[index].toLowerCase()}',
+                                  helperStyle: const TextStyle(fontSize: 12),
+                                  filled: true,
+                                  fillColor: const Color(0xFFF1F3F6),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (_showNominalWarning[index] ?? false)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 4, left: 12),
+                                  child: Text(
+                                    'Max Rp 100.000.000!',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
 
                           // 👇 TAMBAHKAN DI SINI

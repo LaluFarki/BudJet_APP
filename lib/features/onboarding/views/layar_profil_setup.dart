@@ -1,14 +1,17 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../input_budget/layar/layar_form_anggaran.dart';
 import '../../profile/controllers/profile_controller.dart';
+import '../../../core/utils/validation_helper.dart';
 
 /// Layar setup profil awal yang muncul setelah "Get Started".
 /// User memilih nama dan foto profil (avatar cartoon atau galeri).
@@ -24,6 +27,8 @@ class LayarProfilSetup extends StatefulWidget {
 class _LayarProfilSetupState extends State<LayarProfilSetup> {
   final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _showNameWarning = false;
+  Timer? _nameWarningTimer;
 
   // Index avatar yang dipilih (-1 = belum pilih, 0-4 = avatar, 99 = galeri)
   int _selectedAvatarIndex = -1;
@@ -46,13 +51,17 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
   @override
   void dispose() {
     _nameController.dispose();
+    _nameWarningTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _pickFromGallery() async {
     try {
       final picker = ImagePicker();
-      final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      final file = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
       if (file != null) {
         setState(() {
           _galleryImagePath = file.path;
@@ -60,8 +69,10 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
         });
       }
     } catch (e) {
-      Get.snackbar('Gagal', 'Tidak dapat membuka galeri: $e',
-          snackPosition: SnackPosition.TOP,
+      Get.snackbar(
+        'Gagal',
+        'Tidak dapat membuka galeri: $e',
+        snackPosition: SnackPosition.TOP,
         margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
@@ -111,12 +122,16 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
 
       if (uid != null) {
         // Hapus await agar proses tidak terblokir kalau koneksi internet lambat / Firestore nyangkut
-        FirebaseFirestore.instance.collection('users').doc(uid).set(
-          {'name': name, 'profilePic': profilePic},
-          SetOptions(merge: true),
-        ).catchError((e) {
-          debugPrint('Gagal sinkron profile ke Firebase: $e');
-        });
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set({
+              'name': name,
+              'profilePic': profilePic,
+            }, SetOptions(merge: true))
+            .catchError((e) {
+              debugPrint('Gagal sinkron profile ke Firebase: $e');
+            });
       }
 
       // ── Update Controller (jika sudah di-init) ──
@@ -130,8 +145,10 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
       if (!mounted) return;
       Get.off(() => const LayarFormAnggaran());
     } catch (e) {
-      Get.snackbar('Gagal', 'Terjadi kesalahan: $e',
-          snackPosition: SnackPosition.TOP,
+      Get.snackbar(
+        'Gagal',
+        'Terjadi kesalahan: $e',
+        snackPosition: SnackPosition.TOP,
         margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
@@ -158,20 +175,14 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                 const Center(
                   child: Text(
                     'Halo! 👋',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 8),
                 const Center(
                   child: Text(
                     'Atur profil kamu dulu yuk!',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ),
 
@@ -194,7 +205,11 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                               color: Color(0xFFD4E858),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.camera_alt, size: 18, color: Colors.black),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 18,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ),
@@ -238,7 +253,9 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFFD4E858).withValues(alpha: 0.5),
+                                    color: const Color(
+                                      0xFFD4E858,
+                                    ).withValues(alpha: 0.5),
                                     blurRadius: 12,
                                     spreadRadius: 2,
                                   ),
@@ -272,12 +289,11 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
 
                 const SizedBox(height: 28),
 
-                // ── Input Nama ──
                 const Text(
                   'Nama Kamu',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: _showNameWarning ? 5 : 10),
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -290,33 +306,77 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                       ),
                     ],
                   ),
-                  child: TextFormField(
-                    controller: _nameController,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      hintText: 'Masukkan nama kamu...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        textCapitalization: TextCapitalization.words,
+                        onChanged: (val) {
+                          if (val.length < 20 && _showNameWarning) {
+                            setState(() => _showNameWarning = false);
+                          }
+                        },
+                        inputFormatters: [
+                          TextInputFormatter.withFunction((oldValue, newValue) {
+                            if (newValue.text.length > 20) {
+                              if (!_showNameWarning) {
+                                _nameWarningTimer?.cancel();
+                                setState(() => _showNameWarning = true);
+                                _nameWarningTimer = Timer(
+                                  const Duration(milliseconds: 2200),
+                                  () {
+                                    if (mounted)
+                                      setState(() => _showNameWarning = false);
+                                  },
+                                );
+                              }
+                              return oldValue;
+                            }
+                            return newValue;
+                          }),
+                        ],
+                        decoration: InputDecoration(
+                          hintText: 'Masukkan nama kamu...',
+                          hintStyle: TextStyle(color: Colors.grey.shade400),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: _showNameWarning ? 12 : 16,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.person_outline,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Nama tidak boleh kosong';
+                          }
+                          return null;
+                        },
                       ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                      prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
-                    ),
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Nama tidak boleh kosong';
-                      }
-                      if (val.trim().length < 2) {
-                        return 'Nama terlalu pendek';
-                      }
-                      return null;
-                    },
+                      if (_showNameWarning)
+                        Transform.translate(
+                          offset: const Offset(0, -6),
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 16, bottom: 4),
+                            child: Text(
+                              'Maksimal 20 Karakter!',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
 
@@ -381,7 +441,8 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
           ),
         ),
       );
-    } else if (_selectedAvatarIndex >= 0 && _selectedAvatarIndex < _avatars.length) {
+    } else if (_selectedAvatarIndex >= 0 &&
+        _selectedAvatarIndex < _avatars.length) {
       // Avatar emoji
       final av = _avatars[_selectedAvatarIndex];
       return Container(

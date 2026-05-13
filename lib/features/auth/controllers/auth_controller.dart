@@ -55,11 +55,13 @@ class AuthController extends GetxController {
 
   // ─── Login dengan Email dan Password ───────────────────────────────────────
   Future<void> loginWithEmail(String email, String password) async {
+    if (isLoading.value) return;
     try {
       isLoading.value = true;
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       _checkOnboardingAndNavigate();
     } on FirebaseAuthException catch (e) {
+      Get.closeAllSnackbars();
       Get.snackbar(
         'Login Gagal',
         _pesanError(e, konteks: 'login'),
@@ -72,12 +74,14 @@ class AuthController extends GetxController {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
+      await Future.delayed(const Duration(seconds: 1));
       isLoading.value = false;
     }
   }
 
   // ─── Daftar dengan Email dan Password ──────────────────────────────────────
   Future<void> registerWithEmail(String email, String password) async {
+    if (isLoading.value) return;
     try {
       isLoading.value = true;
       UserCredential userCredential = await _auth
@@ -107,6 +111,7 @@ class AuthController extends GetxController {
       );
       Get.offAllNamed(AppRoutes.login);
     } on FirebaseAuthException catch (e) {
+      Get.closeAllSnackbars();
       Get.snackbar(
         'Pendaftaran Gagal',
         _pesanError(e, konteks: 'register'),
@@ -119,12 +124,14 @@ class AuthController extends GetxController {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
+      await Future.delayed(const Duration(seconds: 1));
       isLoading.value = false;
     }
   }
 
   // ─── Login dengan Google ────────────────────────────────────────────────────
   Future<void> loginWithGoogle() async {
+    if (isLoading.value) return;
     try {
       isLoading.value = true;
       await GoogleSignIn.instance.initialize();
@@ -170,6 +177,7 @@ class AuthController extends GetxController {
         }
         _checkOnboardingAndNavigate();
       } on FirebaseAuthException catch (e) {
+        Get.closeAllSnackbars();
         Get.snackbar(
           'Login Google Gagal',
           _pesanError(e, konteks: 'google'),
@@ -178,9 +186,9 @@ class AuthController extends GetxController {
           snackPosition: SnackPosition.TOP,
           duration: const Duration(seconds: 4),
           borderRadius: 12,
-        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      );
+          margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        );
       }
     } catch (e) {
       Get.snackbar(
@@ -195,6 +203,7 @@ class AuthController extends GetxController {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
+      await Future.delayed(const Duration(seconds: 1));
       isLoading.value = false;
     }
   }
@@ -202,6 +211,7 @@ class AuthController extends GetxController {
   // ─── Reset Password via Email ───────────────────────────────────────────────
   Future<void> sendPasswordResetEmail(String email,
       {VoidCallback? onSuccess}) async {
+    if (isLoading.value) return;
     try {
       isLoading.value = true;
       await _auth.sendPasswordResetEmail(email: email);
@@ -222,6 +232,7 @@ class AuthController extends GetxController {
       );
       }
     } on FirebaseAuthException catch (e) {
+      Get.closeAllSnackbars();
       Get.snackbar(
         'Gagal Mengirim Email',
         _pesanError(e, konteks: 'reset'),
@@ -234,6 +245,7 @@ class AuthController extends GetxController {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
+      await Future.delayed(const Duration(seconds: 1));
       isLoading.value = false;
     }
   }

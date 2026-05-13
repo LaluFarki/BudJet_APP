@@ -250,18 +250,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         onPressed: _authController.isLoading.value
                             ? null
                             : () {
-                                if (_emailController.text.isNotEmpty) {
+                                FocusManager.instance.primaryFocus?.unfocus();
+
+                                if (_emailController.text.trim().isNotEmpty) {
                                   _authController.sendPasswordResetEmail(
-                                    _emailController.text,
+                                    _emailController.text.trim(),
                                     onSuccess: () => _showEmailSentDialog(
-                                      _emailController.text,
+                                      _emailController.text.trim(),
                                     ),
                                   );
                                 } else {
+                                  Get.closeAllSnackbars();
                                   Get.snackbar(
                                     'Peringatan',
                                     'Harap masukkan email Anda',
                                     snackPosition: SnackPosition.TOP,
+                                    backgroundColor: const Color(0xFFFFECEC),
+                                    colorText: const Color(0xFF8B0000),
                                     margin: const EdgeInsets.only(
                                       top: 40,
                                       left: 16,
@@ -276,6 +281,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFC8E669),
+                          disabledBackgroundColor: const Color(0xFFC8E669).withValues(alpha: 0.6),
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -286,7 +292,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                ),
                               )
                             : const Text(
                                 'Kirim Tautan Atur Ulang →',

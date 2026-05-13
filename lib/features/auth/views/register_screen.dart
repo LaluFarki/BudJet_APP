@@ -18,11 +18,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isObscure = true;
   bool _isConfirmObscure = true;
 
+  bool _hasMinLength = false;
+  bool _hasUppercase = false;
+  bool _hasLowercase = false;
+  bool _hasNumber = false;
+  bool _hasSpecialChar = false;
+
   @override
   void initState() {
     super.initState();
     _passwordFocusNode.addListener(() {
       setState(() {});
+    });
+    _passwordController.addListener(_updatePasswordStrength);
+  }
+
+  void _updatePasswordStrength() {
+    final pwd = _passwordController.text;
+    setState(() {
+      _hasMinLength = pwd.length >= 8;
+      _hasUppercase = pwd.contains(RegExp(r'[A-Z]'));
+      _hasLowercase = pwd.contains(RegExp(r'[a-z]'));
+      _hasNumber = pwd.contains(RegExp(r'[0-9]'));
+      _hasSpecialChar = pwd.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
     });
   }
 
@@ -145,16 +163,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFC8E669))),
                         ),
                       ),
-                      if (_passwordFocusNode.hasFocus)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            'Password minimal 8 huruf, mengandung huruf besar, huruf kecil, dan angka.',
-                            style: TextStyle(
-                              color: Colors.blueGrey,
-                              fontSize: 11,
-                              fontStyle: FontStyle.italic,
-                            ),
+                      if (_passwordFocusNode.hasFocus || _passwordController.text.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12.0, left: 4.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildRequirementRow('Minimal 8 karakter', _hasMinLength),
+                              const SizedBox(height: 6),
+                              _buildRequirementRow('Mengandung huruf besar & kecil', _hasUppercase && _hasLowercase),
+                              const SizedBox(height: 6),
+                              _buildRequirementRow('Mengandung angka', _hasNumber),
+                              const SizedBox(height: 6),
+                              _buildRequirementRow('Mengandung karakter spesial (!@#\$&*)', _hasSpecialChar),
+                            ],
                           ),
                         ),
                       const SizedBox(height: 20),
@@ -191,10 +213,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         onPressed: _authController.isLoading.value
                             ? null
                             : () {
+                                FocusManager.instance.primaryFocus?.unfocus();
+
                                 if (_emailController.text.trim().isEmpty ||
                                     _passwordController.text.isEmpty ||
                                     _confirmPasswordController.text.isEmpty) {
-                                  Get.snackbar('Error', 'Semua kolom harus diisi');
+                                  Get.closeAllSnackbars();
+                                  Get.snackbar('Peringatan', 'Semua kolom harus diisi');
                                   return;
                                 }
 
@@ -202,17 +227,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 String confirmPwd = _confirmPasswordController.text;
 
                                 if (pwd != confirmPwd) {
-                                  Get.snackbar('Error', 'Password dan Konfirmasi Password tidak cocok');
+                                  Get.closeAllSnackbars();
+                                  Get.snackbar('Peringatan', 'Password dan Konfirmasi Password tidak cocok');
                                   return;
                                 }
 
-                                if (pwd.length < 8 ||
-                                    !pwd.contains(RegExp(r'[A-Z]')) ||
-                                    !pwd.contains(RegExp(r'[a-z]')) ||
-                                    !pwd.contains(RegExp(r'[0-9]'))) {
+                                if (!_hasMinLength || !_hasUppercase || !_hasLowercase || !_hasNumber || !_hasSpecialChar) {
+                                  Get.closeAllSnackbars();
                                   Get.snackbar(
                                     'Peringatan',
-                                    'Password minimal 8 karakter, harus terdiri dari huruf besar, huruf kecil, dan angka.',
+                                    'Password tidak memenuhi semua persyaratan keamanan.',
                                     backgroundColor: Colors.redAccent,
                                     colorText: Colors.white,
                                   );
@@ -226,6 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFC8E669),
+                          disabledBackgroundColor: const Color(0xFFC8E669).withValues(alpha: 0.6),
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -233,7 +258,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                         child: _authController.isLoading.value
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
+                            ? const SizedBox(
+                                height: 20, 
+                                width: 20, 
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                ),
+                              )
                             : const Text('Daftar →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       )),
                       const SizedBox(height: 30),
@@ -270,5 +302,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     ),
   ),
 );
+  }
+
+  Widget _buildRequirementRow(String text, bool isMet) {
+    return Row(
+      children: [
+        Icon(
+          isMet ? Icons.check_circle : Icons.radio_button_unchecked,
+          color: isMet ? Colors.green : Colors.grey,
+          size: 16,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: TextStyle(
+            color: isMet ? Colors.green : Colors.blueGrey,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../core/utils/app_helpers.dart';
+import '../../../core/utils/validation_helper.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,21 +11,7 @@ import '../../../core/constants/app_colors.dart';
 import '../controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 
-class _ThousandsSeparatorFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll('.', '');
-    if (digits.isEmpty) return newValue.copyWith(text: '');
-    final formatted = NumberFormat('#,###', 'id_ID').format(int.parse(digits));
-    return newValue.copyWith(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
+
 
 class AddTransactionScreen extends StatelessWidget {
   // Load kategori dari Firestore (budget user)
@@ -129,12 +117,17 @@ class AddTransactionScreen extends StatelessWidget {
   final _formKey = GlobalKey<FormState>();
 
   final _titleController = TextEditingController();
+  final RxString _titleText = ''.obs;
   final _amountController = TextEditingController();
 
   final RxString _selectedCategory = ''.obs;
   final RxDouble _enteredAmount = 0.0.obs;
   final Rx<DateTime> _selectedDate = DateTime.now().obs;
   final RxBool _isLoading = false.obs;
+  final RxBool _showTitleWarning = false.obs;
+  Timer? _titleWarningTimer;
+  final RxBool _showNominalWarning = false.obs;
+  Timer? _nominalWarningTimer;
 
   final RxList<String> _categories = <String>[].obs;
 
@@ -517,7 +510,7 @@ class AddTransactionScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
-                          vertical: 8,
+                          vertical: 12,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -526,28 +519,72 @@ class AddTransactionScreen extends StatelessWidget {
                             color: Colors.grey.withValues(alpha: 0.1),
                           ),
                         ),
-                        child: TextFormField(
-                          controller: _titleController,
-                          decoration: const InputDecoration(
-                            labelText: 'Nama Pengeluaran',
-                            labelStyle: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
+                        child: Obx(() => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextFormField(
+                              controller: _titleController,
+                              onChanged: (val) {
+                                _titleText.value = val;
+                                if (val.length < 20 && _showTitleWarning.value) {
+                                  _showTitleWarning.value = false;
+                                }
+                              },
+                              inputFormatters: [
+                                TextInputFormatter.withFunction((oldValue, newValue) {
+                                  if (newValue.text.length > 20) {
+                                    if (!_showTitleWarning.value) {
+                                      _titleWarningTimer?.cancel();
+                                      _showTitleWarning.value = true;
+                                      _titleWarningTimer = Timer(const Duration(milliseconds: 2200), () {
+                                        _showTitleWarning.value = false;
+                                      });
+                                    }
+                                    return oldValue;
+                                  }
+                                  return newValue;
+                                }),
+                              ],
+                              decoration: const InputDecoration(
+                                labelText: 'Nama Pengeluaran',
+                                labelStyle: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                                floatingLabelStyle: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                border: InputBorder.none,
+                                suffixIcon: Icon(
+                                  Icons.edit_outlined,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              validator: (val) =>
+                                  val == null || val.isEmpty ? 'Isi judul' : null,
                             ),
-                            border: InputBorder.none,
-                            suffixIcon: Icon(
-                              Icons.edit_outlined,
-                              color: Colors.grey,
-                              size: 20,
-                            ),
-                          ),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          validator: (val) =>
-                              val == null || val.isEmpty ? 'Isi judul' : null,
-                        ),
+                            if (_showTitleWarning.value)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 4),
+                                child: Text(
+                                  'Maksimal 20 Karakter!',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        )),
                       ),
 
                       const SizedBox(height: 16),
@@ -555,7 +592,7 @@ class AddTransactionScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
-                          vertical: 8,
+                          vertical: 12,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -564,80 +601,112 @@ class AddTransactionScreen extends StatelessWidget {
                             color: Colors.grey.withValues(alpha: 0.1),
                           ),
                         ),
-                        child: TextFormField(
-                          controller: _amountController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            _ThousandsSeparatorFormatter(),
+                        child: Obx(() => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextFormField(
+                              controller: _amountController,
+                              keyboardType: TextInputType.number,
+                              onChanged: (val) {
+                                final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
+                                double parsed = double.tryParse(digits) ?? 0;
+
+                                if (parsed < 100000000 && _showNominalWarning.value) {
+                                  _showNominalWarning.value = false;
+                                }
+
+                                final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
+
+                                if (sisaSaldo > 0 && parsed > sisaSaldo) {
+                                  parsed = sisaSaldo.floorToDouble();
+
+                                  final capped = NumberFormat(
+                                    '#,###',
+                                    'id_ID',
+                                  ).format(parsed.toInt());
+
+                                  _amountController.text = capped;
+                                  _amountController.selection =
+                                      TextSelection.collapsed(
+                                        offset: capped.length,
+                                      );
+                                }
+
+                                _enteredAmount.value = parsed;
+                              },
+                              inputFormatters: [
+                                RupiahInputFormatter(
+                                  max: 100000000,
+                                  onMaxExceeded: () {
+                                    if (!_showNominalWarning.value) {
+                                      _nominalWarningTimer?.cancel();
+                                      _showNominalWarning.value = true;
+                                      _nominalWarningTimer = Timer(const Duration(milliseconds: 2200), () {
+                                        _showNominalWarning.value = false;
+                                      });
+                                    }
+                                  },
+                                ),
+                              ],
+                              decoration: const InputDecoration(
+                                labelText: 'Nominal',
+                                labelStyle: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                                floatingLabelStyle: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                prefixText: 'Rp ',
+                                prefixStyle: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: AppColors.textDark,
+                                ),
+                                border: InputBorder.none,
+                                suffixIcon: Icon(
+                                  Icons.edit_outlined,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              validator: (val) {
+                                if (val == null || val.isEmpty) {
+                                  return 'Isi nominal';
+                                }
+                                final cleanVal = val.replaceAll(
+                                  RegExp(r'[^0-9]'),
+                                  '',
+                                );
+
+                                if (double.tryParse(cleanVal) == null) {
+                                  return 'Angka tidak valid';
+                                }
+
+                                return null;
+                              },
+                            ),
+                            if (_showNominalWarning.value)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 4),
+                                child: Text(
+                                  'Max Rp 100.000.000!',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
                           ],
-                          onChanged: (val) {
-                            final digits = val.replaceAll(
-                              RegExp(r'[^0-9]'),
-                              '',
-                            );
-                            double parsed = double.tryParse(digits) ?? 0;
-
-                            final sisaSaldo =
-                                txController.budgetBulanan.value -
-                                txController.totalExpense;
-
-                            if (sisaSaldo > 0 && parsed > sisaSaldo) {
-                              parsed = sisaSaldo.floorToDouble();
-
-                              final capped = NumberFormat(
-                                '#,###',
-                                'id_ID',
-                              ).format(parsed.toInt());
-
-                              _amountController.text = capped;
-                              _amountController.selection =
-                                  TextSelection.collapsed(
-                                    offset: capped.length,
-                                  );
-                            }
-
-                            _enteredAmount.value = parsed;
-                          },
-                          decoration: const InputDecoration(
-                            labelText: 'Nominal',
-                            labelStyle: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
-                            ),
-                            prefixText: 'Rp ',
-                            prefixStyle: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: AppColors.textDark,
-                            ),
-                            border: InputBorder.none,
-                            suffixIcon: Icon(
-                              Icons.edit_outlined,
-                              color: Colors.grey,
-                              size: 20,
-                            ),
-                          ),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return 'Isi nominal';
-                            }
-                            final cleanVal = val.replaceAll(
-                              RegExp(r'[^0-9]'),
-                              '',
-                            );
-
-                            if (double.tryParse(cleanVal) == null) {
-                              return 'Angka tidak valid';
-                            }
-
-                            return null;
-                          },
-                        ),
+                        )),
                       ),
                       // Indikator sisa saldo real-time
                       if (existingTx == null)
@@ -682,7 +751,7 @@ class AddTransactionScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
-                          vertical: 8,
+                          vertical: 12,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -839,7 +908,7 @@ class AddTransactionScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 20,
-                            vertical: 8,
+                            vertical: 12,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white,
