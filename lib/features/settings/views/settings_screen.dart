@@ -263,6 +263,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 12),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: newPasswordCtrl,
+                builder: (_, textEditingValue, __) {
+                  final pwd = textEditingValue.text;
+                  if (pwd.isEmpty) return const SizedBox.shrink();
+
+                  final lengthMet = pwd.length >= 8;
+                  final upperLowerMet = pwd.contains(RegExp(r'[A-Z]')) && pwd.contains(RegExp(r'[a-z]'));
+                  final numberMet = pwd.contains(RegExp(r'[0-9]'));
+                  final specialMet = pwd.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDialogRequirementRow('Minimal 8 karakter', lengthMet),
+                      const SizedBox(height: 6),
+                      _buildDialogRequirementRow('Mengandung huruf besar & kecil', upperLowerMet),
+                      const SizedBox(height: 6),
+                      _buildDialogRequirementRow('Mengandung angka', numberMet),
+                      const SizedBox(height: 6),
+                      _buildDialogRequirementRow('Mengandung karakter spesial (!@#\$&*)', specialMet),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -304,13 +330,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               return;
                             }
 
-                            if (newPwd.length < 8 ||
-                                !newPwd.contains(RegExp(r'[A-Z]')) ||
-                                !newPwd.contains(RegExp(r'[a-z]')) ||
-                                !newPwd.contains(RegExp(r'[0-9]'))) {
+                            final lengthMet = newPwd.length >= 8;
+                            final upperLowerMet = newPwd.contains(RegExp(r'[A-Z]')) && newPwd.contains(RegExp(r'[a-z]'));
+                            final numberMet = newPwd.contains(RegExp(r'[0-9]'));
+                            final specialMet = newPwd.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
+
+                            if (!lengthMet || !upperLowerMet || !numberMet || !specialMet) {
                               Get.snackbar(
                                 'Peringatan',
-                                'Kata sandi minimal 8 karakter, harus terdiri dari huruf besar, huruf kecil, dan angka.',
+                                'Kata sandi baru tidak memenuhi persyaratan keamanan.',
                                 backgroundColor: Colors.redAccent,
                                 colorText: Colors.white,
                                 snackPosition: SnackPosition.TOP,
@@ -785,6 +813,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDialogRequirementRow(String text, bool isMet) {
+    return Row(
+      children: [
+        Icon(
+          isMet ? Icons.check_circle : Icons.radio_button_unchecked,
+          color: isMet ? Colors.green : Colors.grey,
+          size: 16,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: isMet ? Colors.green : Colors.blueGrey,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
