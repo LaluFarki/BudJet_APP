@@ -117,7 +117,7 @@ class DataDiriScreen extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: (isName && _showNameWarning) ? 4 : 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -135,7 +135,7 @@ class DataDiriScreen extends StatelessWidget {
                               if (!_showNameWarning) {
                                 _nameWarningTimer?.cancel();
                                 setStateDialog(() => _showNameWarning = true);
-                                _nameWarningTimer = Timer(const Duration(seconds: 3), () {
+                                _nameWarningTimer = Timer(const Duration(milliseconds: 2200), () {
                                   setStateDialog(() => _showNameWarning = false);
                                 });
                               }
@@ -173,7 +173,7 @@ class DataDiriScreen extends StatelessWidget {
                             'Maksimal 20 Karakter!',
                             style: TextStyle(
                               color: Colors.red,
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight: FontWeight.w500,
                             ),
                           ),

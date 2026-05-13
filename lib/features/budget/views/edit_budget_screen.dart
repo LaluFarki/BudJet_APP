@@ -239,50 +239,92 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   }
 
   void _handleBack() {
-    Get.defaultDialog(
-      title: 'Yakin ingin kembali?',
-      titleStyle: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: AppColors.textDark,
-      ),
-      middleText: _hasChanged
-          ? 'Perubahan Anda belum disimpan.'
-          : 'Anda belum melakukan perubahan apapun.',
-      middleTextStyle: const TextStyle(
-        fontSize: 14,
-        color: AppColors.textGrey,
-      ),
-      radius: 20,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      cancel: OutlinedButton(
-        onPressed: () => Get.back(),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.grey[700],
-          side: BorderSide(color: Colors.grey[300]!),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Yakin ingin kembali?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _hasChanged
+                    ? 'Perubahan Anda belum disimpan.'
+                    : 'Anda belum melakukan perubahan apapun.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  // Tombol Batal
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textDark,
+                        side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Batal',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Tombol Ya, Kembali
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        setState(() => _canPopNow = true);
+                        Get.back();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD4E858),
+                        foregroundColor: AppColors.textDark,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Ya, Kembali',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         ),
-        child: const Text('Batal'),
-      ),
-      confirm: ElevatedButton(
-        onPressed: () {
-          Get.back();
-          setState(() => _canPopNow = true);
-          Get.back();
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF66BB6A), // Vibrant Green
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-        ),
-        child: const Text('Ya, Kembali'),
       ),
     );
   }
@@ -911,9 +953,10 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                   setState(() { _hasChanged = true; });
                 },
                 inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
                   TextInputFormatter.withFunction((oldValue, newValue) {
-                    final amount = ValidationHelper.parseRupiah(newValue.text);
+                    final rawDigits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+                    if (rawDigits.isEmpty) return const TextEditingValue(text: '');
+                    final amount = int.tryParse(rawDigits) ?? 0;
                     if (amount > 100000000) {
                       if (!(_showCatWarning[i] ?? false)) {
                         _catWarningTimers[i]?.cancel();
@@ -922,12 +965,17 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                           if (mounted) setState(() => _showCatWarning[i] = false);
                         });
                       }
+                      const cappedText = 'Rp 100.000.000';
                       return const TextEditingValue(
-                        text: '100.000.000',
-                        selection: TextSelection.collapsed(offset: 11),
+                        text: cappedText,
+                        selection: TextSelection.collapsed(offset: 14),
                       );
                     }
-                    return newValue;
+                    final formatted = _currencyFmt.format(amount);
+                    return TextEditingValue(
+                      text: formatted,
+                      selection: TextSelection.collapsed(offset: formatted.length),
+                    );
                   }),
                 ],
                 decoration: InputDecoration(
@@ -944,14 +992,16 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                 ),
               ),
               if (_showCatWarning[i] ?? false)
-                const Padding(
-                  padding: EdgeInsets.only(top: 2, left: 12),
-                  child: Text(
-                    'Max Rp 100.000.000!',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 4),
+                  child: Center(
+                    child: Text(
+                      'Max Rp 100.000.000!',
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -1006,13 +1056,13 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                         children: [
                           const Text(
                             'Budget Anda',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: _showTotalBudgetWarning ? 4 : 8),
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.04),
@@ -1037,46 +1087,54 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                     });
                                   },
                                   inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
                                     TextInputFormatter.withFunction((oldValue, newValue) {
-                                      final amount = ValidationHelper.parseRupiah(newValue.text);
+                                      final rawDigits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+                                      if (rawDigits.isEmpty) return const TextEditingValue(text: '');
+                                      final amount = int.tryParse(rawDigits) ?? 0;
                                       if (amount > 100000000) {
                                         if (!_showTotalBudgetWarning) {
                                           _totalBudgetWarningTimer?.cancel();
                                           setState(() => _showTotalBudgetWarning = true);
-                                          _totalBudgetWarningTimer = Timer(const Duration(seconds: 3), () {
+                                          _totalBudgetWarningTimer = Timer(const Duration(milliseconds: 2200), () {
                                             if (mounted) setState(() => _showTotalBudgetWarning = false);
                                           });
                                         }
+                                        const cappedText = 'Rp 100.000.000';
                                         return const TextEditingValue(
-                                          text: '100.000.000',
-                                          selection: TextSelection.collapsed(offset: 11),
+                                          text: cappedText,
+                                          selection: TextSelection.collapsed(offset: 14),
                                         );
                                       }
-                                      return newValue;
+                                      final formatted = _currencyFmt.format(amount);
+                                      return TextEditingValue(
+                                        text: formatted,
+                                        selection: TextSelection.collapsed(offset: formatted.length),
+                                      );
                                     }),
                                   ],
                                   style: const TextStyle(fontWeight: FontWeight.bold),
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     hintText: 'Budget Anda',
                                     filled: true,
                                     fillColor: Colors.white,
                                     contentPadding: EdgeInsets.symmetric(
                                       horizontal: 20,
-                                      vertical: 15,
+                                      vertical: _showTotalBudgetWarning ? 12 : 15,
                                     ),
                                     border: InputBorder.none,
                                   ),
                                 ),
                                 if (_showTotalBudgetWarning)
                                   const Padding(
-                                    padding: EdgeInsets.only(left: 20, bottom: 8),
-                                    child: Text(
-                                      'Max Rp 100.000.000!',
-                                      style: TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
+                                    padding: EdgeInsets.only(top: 4, bottom: 8),
+                                    child: Center(
+                                      child: Text(
+                                        'Max Rp 100.000.000!',
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ),

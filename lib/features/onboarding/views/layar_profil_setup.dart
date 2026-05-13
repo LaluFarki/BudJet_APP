@@ -58,7 +58,10 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
   Future<void> _pickFromGallery() async {
     try {
       final picker = ImagePicker();
-      final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      final file = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
       if (file != null) {
         setState(() {
           _galleryImagePath = file.path;
@@ -66,8 +69,10 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
         });
       }
     } catch (e) {
-      Get.snackbar('Gagal', 'Tidak dapat membuka galeri: $e',
-          snackPosition: SnackPosition.TOP,
+      Get.snackbar(
+        'Gagal',
+        'Tidak dapat membuka galeri: $e',
+        snackPosition: SnackPosition.TOP,
         margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
@@ -117,12 +122,16 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
 
       if (uid != null) {
         // Hapus await agar proses tidak terblokir kalau koneksi internet lambat / Firestore nyangkut
-        FirebaseFirestore.instance.collection('users').doc(uid).set(
-          {'name': name, 'profilePic': profilePic},
-          SetOptions(merge: true),
-        ).catchError((e) {
-          debugPrint('Gagal sinkron profile ke Firebase: $e');
-        });
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set({
+              'name': name,
+              'profilePic': profilePic,
+            }, SetOptions(merge: true))
+            .catchError((e) {
+              debugPrint('Gagal sinkron profile ke Firebase: $e');
+            });
       }
 
       // ── Update Controller (jika sudah di-init) ──
@@ -136,8 +145,10 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
       if (!mounted) return;
       Get.off(() => const LayarFormAnggaran());
     } catch (e) {
-      Get.snackbar('Gagal', 'Terjadi kesalahan: $e',
-          snackPosition: SnackPosition.TOP,
+      Get.snackbar(
+        'Gagal',
+        'Terjadi kesalahan: $e',
+        snackPosition: SnackPosition.TOP,
         margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
@@ -164,20 +175,14 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                 const Center(
                   child: Text(
                     'Halo! 👋',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 8),
                 const Center(
                   child: Text(
                     'Atur profil kamu dulu yuk!',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ),
 
@@ -200,7 +205,11 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                               color: Color(0xFFD4E858),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.camera_alt, size: 18, color: Colors.black),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 18,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ),
@@ -244,7 +253,9 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFFD4E858).withValues(alpha: 0.5),
+                                    color: const Color(
+                                      0xFFD4E858,
+                                    ).withValues(alpha: 0.5),
                                     blurRadius: 12,
                                     spreadRadius: 2,
                                   ),
@@ -282,7 +293,7 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                   'Nama Kamu',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: _showNameWarning ? 5 : 10),
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -312,9 +323,13 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                               if (!_showNameWarning) {
                                 _nameWarningTimer?.cancel();
                                 setState(() => _showNameWarning = true);
-                                _nameWarningTimer = Timer(const Duration(seconds: 3), () {
-                                  if (mounted) setState(() => _showNameWarning = false);
-                                });
+                                _nameWarningTimer = Timer(
+                                  const Duration(milliseconds: 2200),
+                                  () {
+                                    if (mounted)
+                                      setState(() => _showNameWarning = false);
+                                  },
+                                );
                               }
                               return oldValue;
                             }
@@ -330,11 +345,14 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                           ),
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
+                          contentPadding: EdgeInsets.symmetric(
                             horizontal: 20,
-                            vertical: 16,
+                            vertical: _showNameWarning ? 12 : 16,
                           ),
-                          prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
+                          prefixIcon: const Icon(
+                            Icons.person_outline,
+                            color: Colors.grey,
+                          ),
                         ),
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
@@ -344,14 +362,17 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
                         },
                       ),
                       if (_showNameWarning)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 4, left: 16, bottom: 8),
-                          child: Text(
-                            'Maksimal 20 Karakter!',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
+                        Transform.translate(
+                          offset: const Offset(0, -6),
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 16, bottom: 4),
+                            child: Text(
+                              'Maksimal 20 Karakter!',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
@@ -420,7 +441,8 @@ class _LayarProfilSetupState extends State<LayarProfilSetup> {
           ),
         ),
       );
-    } else if (_selectedAvatarIndex >= 0 && _selectedAvatarIndex < _avatars.length) {
+    } else if (_selectedAvatarIndex >= 0 &&
+        _selectedAvatarIndex < _avatars.length) {
       // Avatar emoji
       final av = _avatars[_selectedAvatarIndex];
       return Container(

@@ -240,11 +240,11 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                         'Budget Anda',
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: _showBudgetWarning ? 4 : 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 10,
+                          vertical: 16,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -273,25 +273,18 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                                     if (!_showBudgetWarning) {
                                       _budgetWarningTimer?.cancel();
                                       setState(() => _showBudgetWarning = true);
-                                      _budgetWarningTimer = Timer(const Duration(seconds: 3), () {
+                                      _budgetWarningTimer = Timer(const Duration(milliseconds: 2200), () {
                                         if (mounted) setState(() => _showBudgetWarning = false);
                                       });
                                     }
-                                    // Mentokkan ke 100jt
                                     return const TextEditingValue(
-                                      text: '100000000',
-                                      selection: TextSelection.collapsed(offset: 9),
+                                      text: '100.000.000',
+                                      selection: TextSelection.collapsed(offset: 11),
                                     );
                                   }
                                   return newValue;
                                 }),
                               ],
-                              validator: (val) {
-                                if (val != null && val.contains(RegExp(r'[^0-9.]'))) {
-                                  return 'Hanya menerima input angka';
-                                }
-                                return null;
-                              },
                               decoration: const InputDecoration(
                                 prefixText: 'Rp ',
                                 border: InputBorder.none,
@@ -302,15 +295,21 @@ class _LayarFormAnggaranState extends State<LayarFormAnggaran> {
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
                               ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Harap masukkan anggaran';
+                                }
+                                return null;
+                              },
                             ),
                             if (_showBudgetWarning)
                               const Padding(
-                                padding: EdgeInsets.only(top: 0),
+                                padding: EdgeInsets.only(top: 4),
                                 child: Text(
                                   'Max Rp 100.000.000!',
                                   style: TextStyle(
                                     color: Colors.red,
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),

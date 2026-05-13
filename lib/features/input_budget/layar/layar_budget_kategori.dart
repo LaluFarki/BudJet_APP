@@ -411,7 +411,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                             'Nominal',
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: (_showNominalWarning[index] ?? false) ? 4 : 8),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -433,7 +433,7 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                                       if (!(_showNominalWarning[index] ?? false)) {
                                         _nominalWarningTimers[index]?.cancel();
                                         setState(() => _showNominalWarning[index] = true);
-                                        _nominalWarningTimers[index] = Timer(const Duration(seconds: 3), () {
+                                        _nominalWarningTimers[index] = Timer(const Duration(milliseconds: 2200), () {
                                           if (mounted) setState(() => _showNominalWarning[index] = false);
                                         });
                                       }
@@ -461,12 +461,12 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                               ),
                               if (_showNominalWarning[index] ?? false)
                                 const Padding(
-                                  padding: EdgeInsets.only(top: 2, left: 12),
+                                  padding: EdgeInsets.only(top: 4, left: 12),
                                   child: Text(
                                     'Max Rp 100.000.000!',
                                     style: TextStyle(
                                       color: Colors.red,
-                                      fontSize: 11,
+                                      fontSize: 10,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),

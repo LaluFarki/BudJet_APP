@@ -559,7 +559,7 @@ class AddTransactionScreen extends StatelessWidget {
                                     if (!_showTitleWarning.value) {
                                       _titleWarningTimer?.cancel();
                                       _showTitleWarning.value = true;
-                                      _titleWarningTimer = Timer(const Duration(seconds: 3), () {
+                                      _titleWarningTimer = Timer(const Duration(milliseconds: 2200), () {
                                         _showTitleWarning.value = false;
                                       });
                                     }
@@ -588,12 +588,12 @@ class AddTransactionScreen extends StatelessWidget {
                             ),
                             if (_showTitleWarning.value)
                               const Padding(
-                                padding: EdgeInsets.only(top: 0),
+                                padding: EdgeInsets.only(top: 4),
                                 child: Text(
                                   'Maksimal 20 Karakter!',
                                   style: TextStyle(
                                     color: Colors.red,
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -666,7 +666,7 @@ class AddTransactionScreen extends StatelessWidget {
                                     if (!_showNominalWarning.value) {
                                       _nominalWarningTimer?.cancel();
                                       _showNominalWarning.value = true;
-                                      _nominalWarningTimer = Timer(const Duration(seconds: 3), () {
+                                      _nominalWarningTimer = Timer(const Duration(milliseconds: 2200), () {
                                         _showNominalWarning.value = false;
                                       });
                                     }
@@ -717,12 +717,12 @@ class AddTransactionScreen extends StatelessWidget {
                             ),
                             if (_showNominalWarning.value)
                               const Padding(
-                                padding: EdgeInsets.only(top: 0),
+                                padding: EdgeInsets.only(top: 4),
                                 child: Text(
                                   'Max Rp 100.000.000!',
                                   style: TextStyle(
                                     color: Colors.red,
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
