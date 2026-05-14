@@ -20,8 +20,9 @@ class AuthController extends GetxController {
       // ── Kredensial ──
       case 'invalid-credential':
       case 'wrong-password':
-        return 'Email tidak terdaftar atau kata sandi yang kamu masukkan salah. '
-            'Pastikan akun sudah dibuat, atau coba daftar terlebih dahulu.';
+        return konteks == 'login'
+            ? 'Kata sandi yang kamu masukkan salah. Coba periksa kembali.'
+            : 'Email tidak terdaftar atau kata sandi yang kamu masukkan salah. Pastikan akun sudah dibuat.';
       case 'user-not-found':
         return konteks == 'reset'
             ? 'Email ini belum terdaftar. Pastikan kamu memasukkan email yang benar.'
@@ -34,7 +35,7 @@ class AuthController extends GetxController {
       case 'email-already-in-use':
         return 'Email ini sudah digunakan akun lain. Silakan gunakan email berbeda atau langsung login.';
       case 'weak-password':
-        return 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter dengan kombinasi huruf dan angka.';
+        return 'Kata sandi terlalu lemah. Gunakan minimal 8 karakter dengan kombinasi huruf besar, huruf kecil, dan angka.';
       case 'operation-not-allowed':
         return 'Metode login ini belum diaktifkan. Silakan hubungi kami.';
       // ── Jaringan & Batas ──
@@ -57,6 +58,29 @@ class AuthController extends GetxController {
   Future<void> loginWithEmail(String email, String password) async {
     try {
       isLoading.value = true;
+      
+      // Validasi email terdaftar sebelum proses login berjalan
+      try {
+        final methods = await _auth.fetchSignInMethodsForEmail(email);
+        if (methods.isEmpty) {
+          Get.snackbar(
+            'Login Gagal',
+            'Email yang dimasukkan belum terdaftar. Silakan daftar terlebih dahulu.',
+            backgroundColor: const Color(0xFFFFECEC),
+            colorText: const Color(0xFF8B0000),
+            snackPosition: SnackPosition.TOP,
+            duration: const Duration(seconds: 4),
+            borderRadius: 12,
+            margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          );
+          return;
+        }
+      } catch (_) {
+        // Jika terjadi error pada fetchSignInMethodsForEmail, kita lanjutkan
+        // ke proses login utama agar Firebase Auth yang menangani.
+      }
+
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       _checkOnboardingAndNavigate();
     } on FirebaseAuthException catch (e) {
