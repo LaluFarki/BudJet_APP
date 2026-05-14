@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../core/utils/app_helpers.dart';
 import '../../../core/utils/validation_helper.dart';
+import '../../../core/widgets/app_dialog.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -42,74 +43,10 @@ class AddTransactionScreen extends StatelessWidget {
   }
 
   void _showSuccessDialog(String message) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD4F069),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFD4F069).withValues(alpha: 0.4),
-                      blurRadius: 25,
-                      spreadRadius: 5,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.check, color: Colors.white, size: 45),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Get.back(); // close dialog
-                    Get.back(); // back to history
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD4F069),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text(
-                    'Kembali',
-                    style: TextStyle(
-                      color: AppColors.textDark,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: false,
+    AppDialog.success(
+      message: message,
+      buttonLabel: 'Kembali',
+      onClose: () => Get.back(), // back to history
     );
   }
 
@@ -301,50 +238,13 @@ class AddTransactionScreen extends StatelessWidget {
       if (existingTx == null) {
         final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
         if (amount > sisaSaldo) {
-          Get.dialog(
-            AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFECEC),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.account_balance_wallet_outlined,
-                        color: Color(0xFFEC6A6A), size: 40),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Saldo Tidak Cukup',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sisa saldo kamu hanya ${AppHelpers.formatCurrency(sisaSaldo < 0 ? 0 : sisaSaldo)}, tidak cukup untuk transaksi ini.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.blueGrey, fontSize: 13),
-                  ),
-                ],
-              ),
-              actions: [
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Get.back(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEC6A6A),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Mengerti'),
-                  ),
-                ),
-              ],
-            ),
+          AppDialog.error(
+            title: 'Saldo Tidak Cukup',
+            message:
+                'Sisa saldo kamu hanya ${AppHelpers.formatCurrency(sisaSaldo < 0 ? 0 : sisaSaldo)}, tidak cukup untuk transaksi ini.',
+            icon: Icons.account_balance_wallet_outlined,
+            iconColor: const Color(0xFFEC6A6A),
+            iconBgColor: const Color(0xFFFFECEC),
           );
           return;
         }
@@ -367,74 +267,24 @@ class AddTransactionScreen extends StatelessWidget {
 
           if (totalSetelahTransaksi > dailyBudget) {
             // Tanya konfirmasi sebelum lanjut
-            final confirmed = await Get.dialog<bool>(
-              AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFF3CD),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.calendar_today_outlined,
-                          color: Color(0xFFF59E0B), size: 38),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Melewati Budget Harian',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      todaySpent > 0
-                          ? 'Total pengeluaran hari ini untuk "${_selectedCategory.value}" '
-                            'akan menjadi ${AppHelpers.formatCurrency(totalSetelahTransaksi)}, '
-                            'melebihi budget harian sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
-                            'Kamu sudah menghabiskan ${AppHelpers.formatCurrency(todaySpent)} hari ini.'
-                          : 'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) '
-                            'melebihi budget harian kategori "${_selectedCategory.value}" '
-                            'sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
-                            'Melanjutkan dapat mengganggu rencana keuangan harianmu.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.blueGrey, fontSize: 13, height: 1.5),
-                    ),
-                  ],
-                ),
-                actions: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Get.back(result: false),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.grey),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text('Batalkan', style: TextStyle(color: Colors.grey)),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => Get.back(result: true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF59E0B),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text('Tetap Lanjut'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            final confirmed = await AppDialog.confirm(
+              title: 'Melewati Budget Harian',
+              message: todaySpent > 0
+                  ? 'Total pengeluaran hari ini untuk "${_selectedCategory.value}" '
+                    'akan menjadi ${AppHelpers.formatCurrency(totalSetelahTransaksi)}, '
+                    'melebihi budget harian sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
+                    'Kamu sudah menghabiskan ${AppHelpers.formatCurrency(todaySpent)} hari ini.'
+                  : 'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) '
+                    'melebihi budget harian kategori "${_selectedCategory.value}" '
+                    'sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
+                    'Melanjutkan dapat mengganggu rencana keuangan harianmu.',
+              cancelLabel: 'Batalkan',
+              confirmLabel: 'Tetap Lanjut',
+              icon: Icons.calendar_today_outlined,
+              iconColor: const Color(0xFFF59E0B),
+              iconBgColor: const Color(0xFFFFF3CD),
+              confirmColor: const Color(0xFFF59E0B),
+              confirmTextColor: Colors.white,
             );
             if (confirmed != true) return; // User pilih Batalkan
           }

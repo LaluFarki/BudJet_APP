@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_helpers.dart';
 import '../../../core/utils/validation_helper.dart';
+import '../../../core/widgets/app_dialog.dart';
 
 class EditBudgetScreen extends StatefulWidget {
   const EditBudgetScreen({super.key});
@@ -317,25 +318,26 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   void _removeCategory(int index) {
     final catName = _categories[index]['nama'] ?? 'Kategori';
 
-    Get.defaultDialog(
+    AppDialog.confirm(
       title: 'Hapus Kategori?',
-      middleText:
-          'Apakah Anda yakin ingin menghapus kategori "$catName" dari anggaran?',
-      textConfirm: 'Hapus',
-      textCancel: 'Batal',
+      message: 'Apakah Anda yakin ingin menghapus kategori "$catName" dari anggaran?',
+      confirmLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      icon: Icons.delete_outline_rounded,
+      iconColor: Colors.redAccent,
+      iconBgColor: const Color(0xFFFFEEEE),
+      confirmColor: Colors.redAccent,
       confirmTextColor: Colors.white,
-      buttonColor: Colors.redAccent,
-      cancelTextColor: AppColors.textDark,
-      onConfirm: () {
+    ).then((confirmed) {
+      if (confirmed == true) {
         setState(() {
           _categories.removeAt(index);
           _catControllers[index].dispose();
           _catControllers.removeAt(index);
           _hasChanged = true;
         });
-        Get.back();
-      },
-    );
+      }
+    });
   }
 
   void _showAddCategoryDialog() {
@@ -566,31 +568,19 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   void _showSisaDanaConfirmation() {
     final sisa = _sisaBudget;
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Saldo Masih Tersisa'),
-          content: Text(
-            'Masih ada ${_currencyFmt.format(sisa.toInt())} yang belum dialokasikan. '
-            'Saldo ini akan otomatis dimasukkan ke kategori Sisa Dana.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cek Lagi'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _saveBudget();
-              },
-              child: const Text('Lanjutkan'),
-            ),
-          ],
-        );
-      },
-    );
+    AppDialog.confirm(
+      title: 'Saldo Masih Tersisa',
+      message:
+          'Masih ada ${_currencyFmt.format(sisa.toInt())} yang belum dialokasikan. '
+          'Saldo ini akan otomatis dimasukkan ke kategori Sisa Dana.',
+      cancelLabel: 'Cek Lagi',
+      confirmLabel: 'Lanjutkan',
+      icon: Icons.savings_outlined,
+      iconColor: const Color(0xFF4CAF50),
+      iconBgColor: const Color(0xFFE8F5E9),
+    ).then((confirmed) {
+      if (confirmed == true) _saveBudget();
+    });
   }
 
   Future<void> _saveBudget() async {
@@ -691,10 +681,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
     }
 
     try {
-      Get.dialog(
-        const Center(child: CircularProgressIndicator()),
-        barrierDismissible: false,
-      );
+      AppDialog.loading(message: 'Menyimpan budget...');
 
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'budgetBulanan': totalBudget,
@@ -733,59 +720,15 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
     final sisa = _sisaBudget;
     final isOver = sisa < 0;
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          backgroundColor: const Color(0xFFE57373),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isOver ? 'Budget Melebihi Batas' : 'Saldo Masih Tersisa',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  isOver
-                      ? 'Total alokasi melebihi budget sebesar ${_currencyFmt.format(sisa.abs().toInt())}.'
-                      : 'Masih ada ${_currencyFmt.format(sisa.toInt())} yang belum dialokasikan.',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    AppDialog.error(
+      title: isOver ? 'Budget Melebihi Batas' : 'Saldo Masih Tersisa',
+      message: isOver
+          ? 'Total alokasi melebihi budget sebesar ${_currencyFmt.format(sisa.abs().toInt())}.'
+          : 'Masih ada ${_currencyFmt.format(sisa.toInt())} yang belum dialokasikan.',
+      icon: isOver ? Icons.error_outline_rounded : Icons.savings_outlined,
+      iconColor: isOver ? const Color(0xFFEC6A6A) : const Color(0xFF4CAF50),
+      iconBgColor: isOver ? const Color(0xFFFFECEC) : const Color(0xFFE8F5E9),
+      buttonLabel: 'OK',
     );
   }
 
