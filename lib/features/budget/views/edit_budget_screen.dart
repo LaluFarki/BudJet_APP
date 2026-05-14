@@ -85,25 +85,26 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
         final catsRaw = data['categories'] ?? [];
         _categories = List<Map<String, dynamic>>.from(catsRaw);
 
-        _totalBudgetCtrl.text = NumberFormat('#,###', 'id_ID').format(_budgetBulanan).replaceAll(',', '.');
+        _totalBudgetCtrl.text = NumberFormat(
+          '#,###',
+          'id_ID',
+        ).format(_budgetBulanan).replaceAll(',', '.');
 
         _catControllers = _categories.map((c) {
           final ctrl = TextEditingController();
 
           final nama = c['nama'] as String? ?? '';
           final period = c['periode'] as String? ?? 'monthly';
-          final divider = _periodDivider(period);
 
           final alokasiBulanan = (c['alokasiBulanan'] ?? c['alokasi'] ?? 0)
               .toDouble();
 
           final used = _expenseBulanan(nama);
           final sisaBulanan = alokasiBulanan - used;
-          final sisaSesuaiPeriode =
-              (sisaBulanan < 0 ? 0 : sisaBulanan) / divider;
-
-          ctrl.text = NumberFormat('#,###', 'id_ID').format(sisaSesuaiPeriode).replaceAll(',', '.');
-
+          ctrl.text = NumberFormat(
+            '#,###',
+            'id_ID',
+          ).format(sisaBulanan < 0 ? 0 : sisaBulanan).replaceAll(',', '.');
           ctrl.addListener(() {
             _hasChanged = true;
             setState(() {});
@@ -192,14 +193,10 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
       final nama = category['nama'] as String? ?? '';
       final period = category['periode'] as String? ?? 'monthly';
-      final divider = _periodDivider(period);
-
-      final sisaInputSesuaiPeriode = _parseRupiah(_catControllers[i].text);
       final used = _expenseBulanan(nama);
+      final inputBulanan = _parseRupiah(_catControllers[i].text);
 
-      final alokasiBulananBaru = (sisaInputSesuaiPeriode * divider) + used;
-
-      sum += alokasiBulananBaru;
+      sum += inputBulanan;
     }
 
     return sum;
@@ -249,10 +246,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                     ? 'Perubahan Anda belum disimpan.'
                     : 'Anda belum melakukan perubahan apapun.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade500,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               ),
               const SizedBox(height: 24),
               Row(
@@ -263,7 +257,10 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       onPressed: () => Navigator.pop(ctx),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textDark,
-                        side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                        side: BorderSide(
+                          color: Colors.grey.shade300,
+                          width: 1.5,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
@@ -340,7 +337,6 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
   void _showAddCategoryDialog() {
     final TextEditingController nameCtrl = TextEditingController();
-    String selectedPeriod = 'monthly';
     bool showNameWarning = false;
     Timer? nameWarningTimer;
 
@@ -363,110 +359,58 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
                   const SizedBox(height: 16),
 
-                      const Text(
-                        'Nama kategori',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                  const Text(
+                    'Nama kategori',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: nameCtrl,
+                    onChanged: (val) {
+                      if (val.length < 20 && showNameWarning) {
+                        setDialogState(() => showNameWarning = false);
+                      }
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Nama kategori',
+                      helperText: 'Hanya huruf dan spasi',
+                      errorText: showNameWarning
+                          ? 'Maksimal 20 Karakter!'
+                          : null,
+                      errorStyle: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 12,
+                        height: 0.8, // Naikkan posisi tanpa merusak box
                       ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: nameCtrl,
-                        onChanged: (val) {
-                          if (val.length < 20 && showNameWarning) {
-                            setDialogState(() => showNameWarning = false);
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                      TextInputFormatter.withFunction((oldValue, newValue) {
+                        if (newValue.text.length > 20) {
+                          if (!showNameWarning) {
+                            nameWarningTimer?.cancel();
+                            setDialogState(() => showNameWarning = true);
+                            nameWarningTimer = Timer(
+                              const Duration(seconds: 3),
+                              () {
+                                setDialogState(() => showNameWarning = false);
+                              },
+                            );
                           }
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Nama kategori',
-                          helperText: 'Hanya huruf dan spasi',
-                          errorText: showNameWarning ? 'Maksimal 20 Karakter!' : null,
-                          errorStyle: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 12,
-                            height: 0.8, // Naikkan posisi tanpa merusak box
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                          TextInputFormatter.withFunction((oldValue, newValue) {
-                            if (newValue.text.length > 20) {
-                              if (!showNameWarning) {
-                                nameWarningTimer?.cancel();
-                                setDialogState(() => showNameWarning = true);
-                                nameWarningTimer = Timer(const Duration(seconds: 3), () {
-                                  setDialogState(() => showNameWarning = false);
-                                });
-                              }
-                              return oldValue;
-                            }
-                            return newValue;
-                          }),
-                        ],
-                      ),
+                          return oldValue;
+                        }
+                        return newValue;
+                      }),
+                    ],
+                  ),
 
                   const SizedBox(height: 16),
-
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F3F6),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children:
-                          [
-                            {'label': 'Harian', 'value': 'daily'},
-                            {'label': 'Mingguan', 'value': 'weekly'},
-                            {'label': 'Bulanan', 'value': 'monthly'},
-                          ].map((item) {
-                            final selected = selectedPeriod == item['value'];
-
-                            return Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedPeriod = item['value']!;
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: selected
-                                        ? const Color(0xFFD6E85A)
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      item['label']!,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: selected
-                                            ? Colors.black
-                                            : Colors.grey,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Text(
-                    'Nominal kategori ini nanti diisi per ${_periodSuffix(selectedPeriod)}.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
 
                   const SizedBox(height: 24),
 
@@ -499,16 +443,23 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                 'Gagal',
                                 'Kategori sudah ada',
                                 snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      );
+                                margin: const EdgeInsets.only(
+                                  top: 40,
+                                  left: 16,
+                                  right: 16,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 20,
+                                ),
+                              );
                               return;
                             }
 
                             setState(() {
                               _categories.add({
                                 'nama': name,
-                                'periode': selectedPeriod,
+                                'periode': 'monthly',
                                 'alokasiInput': 0.0,
                                 'alokasiBulanan': 0.0,
                                 'alokasi': 0.0,
@@ -607,15 +558,11 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
       final name = oldCategory['nama'] as String? ?? '';
       final period = oldCategory['periode'] as String? ?? 'monthly';
-      final divider = _periodDivider(period);
-
-      final sisaInputSesuaiPeriode = _parseRupiah(_catControllers[i].text);
       final used = _expenseBulanan(name);
 
-      final alokasiBulananBaru = (sisaInputSesuaiPeriode * divider) + used;
+      final alokasiBulananBaru = _parseRupiah(_catControllers[i].text);
 
-      final alokasiInputBaru = alokasiBulananBaru / divider;
-
+      final alokasiInputBaru = alokasiBulananBaru;
       final persentase = totalBudget > 0
           ? (alokasiBulananBaru / totalBudget * 100).roundToDouble()
           : 0.0;
@@ -630,7 +577,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
         'persentase': persentase,
         'harian': (alokasiBulananBaru / 30).roundToDouble(),
         'terpakai': used,
-        'sisa': sisaInputSesuaiPeriode,
+        'sisa': (alokasiBulananBaru - used) < 0 ? 0 : alokasiBulananBaru - used,
         'isAutoCategory': false,
       });
     }
@@ -898,24 +845,32 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
           const SizedBox(height: 10),
 
           Text(
-            'Alokasi awal: ${_currencyFmt.format(alokasiAwal)}',
+            'Alokasi bulanan saat ini: ${_currencyFmt.format(alokasiAwal)}',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 4),
           Text(
-            'Sudah digunakan: ${_currencyFmt.format(used)}',
+            'Sudah digunakan bulan ini: ${_currencyFmt.format(used)}',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 4),
           Text(
-            'Sisa saat ini: ${_currencyFmt.format(sisaSaatIni < 0 ? 0 : sisaSaatIni)}',
+            'Sisa budget bulan ini: ${_currencyFmt.format(sisaSaatIni < 0 ? 0 : sisaSaatIni)}',
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
               color: AppColors.textDark,
             ),
           ),
-
+          const SizedBox(height: 6),
+          Text(
+            'Isi nominal baru dalam bentuk budget bulanan.',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
           const SizedBox(height: 12),
 
           const Text(
@@ -935,7 +890,9 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                     setState(() => _showCatWarning[i] = false);
                   }
                   // Formatting handled by RupiahInputFormatter
-                  setState(() { _hasChanged = true; });
+                  setState(() {
+                    _hasChanged = true;
+                  });
                 },
                 inputFormatters: [
                   RupiahInputFormatter(
@@ -944,9 +901,13 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       if (!(_showCatWarning[i] ?? false)) {
                         _catWarningTimers[i]?.cancel();
                         setState(() => _showCatWarning[i] = true);
-                        _catWarningTimers[i] = Timer(const Duration(seconds: 3), () {
-                          if (mounted) setState(() => _showCatWarning[i] = false);
-                        });
+                        _catWarningTimers[i] = Timer(
+                          const Duration(seconds: 3),
+                          () {
+                            if (mounted)
+                              setState(() => _showCatWarning[i] = false);
+                          },
+                        );
                       }
                     },
                   ),
@@ -954,9 +915,6 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                 decoration: InputDecoration(
                   hintText: 'Budget tersisa',
                   prefixText: 'Rp ',
-                  helperText:
-                      'Sisa budget ${catName.toLowerCase()} per ${_periodSuffix(period)}',
-                  helperStyle: const TextStyle(fontSize: 12),
                   filled: true,
                   fillColor: const Color(0xFFF1F3F6),
                   border: OutlineInputBorder(
@@ -964,6 +922,104 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                     borderSide: BorderSide.none,
                   ),
                 ),
+              ),
+              const SizedBox(height: 14),
+
+              const Text(
+                'Pilih periode penggunaan',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F3F6),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children:
+                      [
+                        {'label': 'Harian', 'value': 'daily'},
+                        {'label': 'Mingguan', 'value': 'weekly'},
+                        {'label': 'Bulanan', 'value': 'monthly'},
+                      ].map((item) {
+                        final selected = period == item['value'];
+
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _categories[i]['periode'] = item['value'];
+                                _hasChanged = true;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? const Color(0xFFD6E85A)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  item['label']!,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: selected
+                                        ? Colors.black
+                                        : Colors.grey,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              Builder(
+                builder: (_) {
+                  final nominal = _parseRupiah(_catControllers[i].text);
+
+                  double estimasi = nominal;
+
+                  if (period == 'daily') {
+                    estimasi = nominal / 30;
+                  } else if (period == 'weekly') {
+                    estimasi = nominal / 4;
+                  }
+
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F7FA),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Estimasi penggunaan: '
+                      '${_currencyFmt.format(estimasi.toInt())} '
+                      'per ${_periodSuffix(period)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                },
               ),
               if (_showCatWarning[i] ?? false)
                 const Padding(
@@ -1050,9 +1106,14 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                   controller: _totalBudgetCtrl,
                                   keyboardType: TextInputType.number,
                                   onChanged: (val) {
-                                    final amount = ValidationHelper.parseRupiah(val);
-                                    if (amount < 100000000 && _showTotalBudgetWarning) {
-                                      setState(() => _showTotalBudgetWarning = false);
+                                    final amount = ValidationHelper.parseRupiah(
+                                      val,
+                                    );
+                                    if (amount < 100000000 &&
+                                        _showTotalBudgetWarning) {
+                                      setState(
+                                        () => _showTotalBudgetWarning = false,
+                                      );
                                     }
                                     setState(() {
                                       _hasChanged = true;
@@ -1064,24 +1125,42 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                       onMaxExceeded: () {
                                         if (!_showTotalBudgetWarning) {
                                           _totalBudgetWarningTimer?.cancel();
-                                          setState(() => _showTotalBudgetWarning = true);
-                                          _totalBudgetWarningTimer = Timer(const Duration(milliseconds: 2200), () {
-                                            if (mounted) setState(() => _showTotalBudgetWarning = false);
-                                          });
+                                          setState(
+                                            () =>
+                                                _showTotalBudgetWarning = true,
+                                          );
+                                          _totalBudgetWarningTimer = Timer(
+                                            const Duration(milliseconds: 2200),
+                                            () {
+                                              if (mounted)
+                                                setState(
+                                                  () =>
+                                                      _showTotalBudgetWarning =
+                                                          false,
+                                                );
+                                            },
+                                          );
                                         }
                                       },
                                     ),
                                   ],
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                   decoration: InputDecoration(
-                                      hintText: 'Budget Anda',
-                                      prefixText: 'Rp ',
-                                      prefixStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark),
-                                      filled: true,
+                                    hintText: 'Budget Anda',
+                                    prefixText: 'Rp ',
+                                    prefixStyle: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textDark,
+                                    ),
+                                    filled: true,
                                     fillColor: Colors.white,
                                     contentPadding: EdgeInsets.symmetric(
                                       horizontal: 20,
-                                      vertical: _showTotalBudgetWarning ? 12 : 15,
+                                      vertical: _showTotalBudgetWarning
+                                          ? 12
+                                          : 15,
                                     ),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(20),
@@ -1099,7 +1178,11 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                 ),
                                 if (_showTotalBudgetWarning)
                                   const Padding(
-                                    padding: EdgeInsets.only(top: 0, bottom: 16, left: 20),
+                                    padding: EdgeInsets.only(
+                                      top: 0,
+                                      bottom: 16,
+                                      left: 20,
+                                    ),
                                     child: Text(
                                       'Max Rp 100.000.000!',
                                       style: TextStyle(
@@ -1126,10 +1209,13 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                         ),
                         child: Column(
                           children: [
-                            ...List.generate(
-                              _categories.length,
-                              _buildCategoryCard,
-                            ),
+                            ...List.generate(_categories.length, (i) {
+                              if (_isSisaDana(_categories[i])) {
+                                return const SizedBox.shrink();
+                              }
+
+                              return _buildCategoryCard(i);
+                            }),
                             const SizedBox(height: 8),
                           ],
                         ),
