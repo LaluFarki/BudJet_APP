@@ -2,8 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-
-import 'package:budjet/features/algoritma_pembagian/smart_budget_engine.dart';
 import 'package:budjet/features/algoritma_pembagian/smart_budget_model.dart';
 import 'layar_analisis_budget.dart';
 import '../../../../core/utils/app_helpers.dart';
@@ -31,8 +29,6 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   final Map<int, bool> _showNominalWarning = {};
   final Map<int, Timer?> _nominalWarningTimers = {};
 
-  final SmartBudgetEngine _engine = SmartBudgetEngine();
-
   double get _budgetHarian {
     final jumlahHari = DateTime(
       widget.bulan.year,
@@ -54,9 +50,8 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
 
     for (int i = 0; i < controllers.length; i++) {
       final nominal = _parseRupiah(controllers[i].text);
-      final period = _periodFromString(periodeList[i]);
 
-      total += _engine.convertToMonthly(nominal, period);
+      total += nominal;
     }
 
     return total;
@@ -128,6 +123,27 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
   }
 
   void _lanjut() {
+    final adaKosong = controllers.any((c) => _parseRupiah(c.text) <= 0);
+
+    if (adaKosong) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Budget Belum Lengkap'),
+          content: const Text(
+            'Pastikan semua kategori sudah diisi nominal bulanannya.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     if (!_isValid) {
       _showValidationPopup();
       return;
@@ -198,26 +214,26 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
     );
   }
 
-  String _getPreviewBulanan(double nominal, String periode) {
-    int multiplier = 1;
+  String _getPreviewPeriode(double nominalBulanan, String periode) {
+    if (nominalBulanan == 0) return '';
+
+    final totalBulanan = _currencyFormat.format(nominalBulanan.toInt());
 
     switch (periode) {
       case 'Harian':
-        multiplier = 30;
-        break;
+        final harian = nominalBulanan / 30;
+        return 'Dari $totalBulanan/bulan, kamu dapat menggunakan sekitar ${_currencyFormat.format(harian.toInt())} per hari.';
+
       case 'Mingguan':
-        multiplier = 4;
-        break;
+        final mingguan = nominalBulanan / 4;
+        return 'Dari $totalBulanan/bulan, kamu dapat menggunakan sekitar ${_currencyFormat.format(mingguan.toInt())} per minggu.';
+
       case 'Bulanan':
-        multiplier = 1;
-        break;
+        return '$totalBulanan akan digunakan untuk 1 bulan penuh.';
+
+      default:
+        return '';
     }
-
-    final total = nominal * multiplier;
-
-    if (nominal == 0) return '';
-
-    return 'Alokasi 1 bulan = ${_currencyFormat.format(nominal.toInt())} × $multiplier = ${_currencyFormat.format(total.toInt())}';
   }
 
   void _showValidationPopup() {
@@ -395,48 +411,98 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                               ),
                             ],
                           ),
-                          const Text(
-                            'Nominal',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+
+                          SizedBox(
+                            height: (_showNominalWarning[index] ?? false)
+                                ? 4
+                                : 8,
                           ),
-                          SizedBox(height: (_showNominalWarning[index] ?? false) ? 4 : 8),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Text(
+                                'Masukkan budget bulanan untuk ${kategori.toLowerCase()}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey,
+                                ),
+                              ),
+
+                              const SizedBox(height: 6),
                               TextFormField(
                                 controller: controllers[index],
                                 keyboardType: TextInputType.number,
                                 onChanged: (value) {
-                                  final amount = ValidationHelper.parseRupiah(value);
-                                  if (amount < 100000000 && (_showNominalWarning[index] ?? false)) {
-                                    setState(() => _showNominalWarning[index] = false);
+                                  final amount = ValidationHelper.parseRupiah(
+                                    value,
+                                  );
+                                  if (amount < 100000000 &&
+                                      (_showNominalWarning[index] ?? false)) {
+                                    setState(
+                                      () => _showNominalWarning[index] = false,
+                                    );
                                   }
                                 },
                                 inputFormatters: [
                                   RupiahInputFormatter(
                                     max: 100000000,
                                     onMaxExceeded: () {
-                                      if (!(_showNominalWarning[index] ?? false)) {
+                                      if (!(_showNominalWarning[index] ??
+                                          false)) {
                                         _nominalWarningTimers[index]?.cancel();
-                                        setState(() => _showNominalWarning[index] = true);
-                                        _nominalWarningTimers[index] = Timer(const Duration(milliseconds: 2200), () {
-                                          if (mounted) setState(() => _showNominalWarning[index] = false);
-                                        });
+                                        setState(
+                                          () =>
+                                              _showNominalWarning[index] = true,
+                                        );
+                                        _nominalWarningTimers[index] = Timer(
+                                          const Duration(milliseconds: 2200),
+                                          () {
+                                            if (mounted)
+                                              setState(
+                                                () =>
+                                                    _showNominalWarning[index] =
+                                                        false,
+                                              );
+                                          },
+                                        );
                                       }
                                     },
                                   ),
                                 ],
                                 decoration: InputDecoration(
-                                  hintText:
-                                      'Nominal per ${periodeList[index].toLowerCase()}',
-                                  helperText:
-                                      'Jatah ${kategori.toLowerCase()} per ${periodeList[index].toLowerCase()}',
-                                  helperStyle: const TextStyle(fontSize: 12),
+                                  hintText: 'Contoh: Rp 600.000',
+
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+
                                   filled: true,
-                                  fillColor: const Color(0xFFF1F3F6),
+                                  fillColor: const Color(0xFFF5F7FA),
+
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 16,
+                                  ),
+
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(14),
                                     borderSide: BorderSide.none,
+                                  ),
+
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFD6E85A),
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -455,34 +521,19 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                             ],
                           ),
 
-                          // 👇 TAMBAHKAN DI SINI
-                          Builder(
-                            builder: (_) {
-                              final nominal = _parseRupiah(
-                                controllers[index].text,
-                              );
-                              final preview = _getPreviewBulanan(
-                                nominal,
-                                periodeList[index],
-                              );
-
-                              if (preview.isEmpty) return const SizedBox();
-
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  preview,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade700,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                          const SizedBox(height: 12),
 
                           const SizedBox(height: 12),
+
+                          const Text(
+                            'Pilih periode penggunaan',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
 
                           Container(
                             padding: const EdgeInsets.all(4),
@@ -529,6 +580,31 @@ class _LayarBudgetKategoriState extends State<LayarBudgetKategori> {
                                 );
                               }).toList(),
                             ),
+                          ),
+
+                          Builder(
+                            builder: (_) {
+                              final nominal = _parseRupiah(
+                                controllers[index].text,
+                              );
+                              final preview = _getPreviewPeriode(
+                                nominal,
+                                periodeList[index],
+                              );
+                              if (preview.isEmpty) return const SizedBox();
+
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  preview,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

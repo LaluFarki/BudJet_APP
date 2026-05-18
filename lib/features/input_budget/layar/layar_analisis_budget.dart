@@ -64,6 +64,17 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
     }
   }
 
+  double _amountPerPeriod(double monthlyAmount, BudgetPeriod period) {
+    switch (period) {
+      case BudgetPeriod.daily:
+        return monthlyAmount / 30;
+      case BudgetPeriod.weekly:
+        return monthlyAmount / 4;
+      case BudgetPeriod.monthly:
+        return monthlyAmount;
+    }
+  }
+
   Future<void> _simpan() async {
     if (_isSaving) return;
     setState(() => _isSaving = true);
@@ -232,27 +243,22 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
                       kategoriSummary.length,
                     ),
                     const SizedBox(height: 20),
-                    ...kategoriSummary
-                        .where((c) => !c.isAutoCategory)
-                        .toList()
-                        .asMap()
-                        .entries
-                        .map((e) {
-                          final category = e.value;
+                    ...kategoriSummary.asMap().entries.map((e) {
+                      final category = e.value;
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: _buildDetailRow(
-                              icon: _iconForKategori(category.name),
-                              iconBg: _iconBgFor(category.name, e.key),
-                              iconColor: _colorForIndex(category.name, e.key),
-                              title: '${category.name}',
-                              amount: _currencyFormat.format(
-                                category.monthlyEquivalent,
-                              ),
-                            ),
-                          );
-                        }),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildDetailRow(
+                          icon: _iconForKategori(category.name),
+                          iconBg: _iconBgFor(category.name, e.key),
+                          iconColor: _colorForIndex(category.name, e.key),
+                          title: '${category.name}',
+                          amount: _currencyFormat.format(
+                            category.monthlyEquivalent,
+                          ),
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -279,7 +285,7 @@ class _LayarAnalisisBudgetState extends State<LayarAnalisisBudget> {
                           iconColor: _colorForIndex(category.name, e.key),
                           title: category.name,
                           amount:
-                              '${_currencyFormat.format(category.allocationAmount)}/${_periodSuffix(category.period)}',
+                              '${_currencyFormat.format(_amountPerPeriod(category.monthlyEquivalent, category.period))}/${_periodSuffix(category.period)}',
                         ),
                       );
                     }),

@@ -4,14 +4,7 @@ class SmartBudgetEngine {
   static const String sisaDanaId = 'sisa_dana';
 
   double convertToMonthly(double amount, BudgetPeriod period) {
-    switch (period) {
-      case BudgetPeriod.daily:
-        return amount * 30;
-      case BudgetPeriod.weekly:
-        return amount * 4;
-      case BudgetPeriod.monthly:
-        return amount;
-    }
+    return amount;
   }
 
   List<BudgetCategory> applySisaDanaCategory({

@@ -167,6 +167,53 @@ class BudgetScreen extends StatelessWidget {
                   }
                 }
 
+                double periodDivider(String period) {
+                  switch (period) {
+                    case 'daily':
+                      return 30;
+                    case 'weekly':
+                      return 4;
+                    case 'monthly':
+                    default:
+                      return 1;
+                  }
+                }
+
+                double expensePeriode(String kat, String period) {
+                  final now = DateTime.now();
+
+                  return txCtrl.transactions
+                      .where((tx) {
+                        if (tx.type != 'expense') return false;
+                        if (!matchKategori(tx.kategori, kat)) return false;
+
+                        if (period == 'daily') {
+                          return tx.date.year == now.year &&
+                              tx.date.month == now.month &&
+                              tx.date.day == now.day;
+                        }
+
+                        if (period == 'weekly') {
+                          final startOfWeek = DateTime(
+                            now.year,
+                            now.month,
+                            now.day,
+                          ).subtract(Duration(days: now.weekday - 1));
+                          final endOfWeek = startOfWeek.add(
+                            const Duration(days: 7),
+                          );
+
+                          return tx.date.isAtSameMomentAs(startOfWeek) ||
+                              (tx.date.isAfter(startOfWeek) &&
+                                  tx.date.isBefore(endOfWeek));
+                        }
+
+                        return tx.date.year == now.year &&
+                            tx.date.month == now.month;
+                      })
+                      .fold(0.0, (total, item) => total + item.amount);
+                }
+
                 // Gunakan Obx agar SELURUH tampilan reaktif terhadap perubahan transaksi
                 return Obx(() {
                   final double expensesTotal = txCtrl.transactions
@@ -325,7 +372,7 @@ class BudgetScreen extends StatelessWidget {
 
                           // 2. Rincian Budget Bulanan
                           _buildRincianCard(
-                            title: 'Rincian Budget Bulanan',
+                            title: 'Rincian Sisa Penggunaan Budget Bulanan',
                             count: categories.length,
                             children: categories.asMap().entries.map((e) {
                               final nama = e.value['nama'] as String? ?? '';
@@ -353,29 +400,33 @@ class BudgetScreen extends StatelessWidget {
 
                           const SizedBox(height: 24),
 
-                          // 3. Rincian Budget Harian
+                          // 3. Rincian Budget Per Kategori (sesuai periode)
                           _buildRincianCard(
-                            title: 'Budget per Kategori (Sesuai Periode)',
+                            title:
+                                'Sisa Penggunaan Budget per Kategori (Sesuai Periode)',
                             count: categories.length,
                             children: categories.asMap().entries.map((e) {
                               final nama = e.value['nama'] as String? ?? '';
                               final periode =
                                   e.value['periode'] as String? ?? 'monthly';
-                              final alokasiInput =
-                                  (e.value['alokasiInput'] ??
+                              final alokasiBulanan =
+                                  (e.value['alokasiBulanan'] ??
                                           e.value['alokasi'] ??
                                           0)
                                       .toDouble();
-                              final used = expenseBulanan(nama);
-                              final sisa = alokasiInput - used;
 
+                              final divider = periodDivider(periode);
+                              final alokasiPeriode = alokasiBulanan / divider;
+
+                              final used = expensePeriode(nama, periode);
+                              final sisa = alokasiPeriode - used;
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: _buildDetailRow(
                                   kategori: nama,
                                   index: e.key,
                                   amount:
-                                      '${formatK(sisa < 0 ? 0 : sisa)} / ${formatK(alokasiInput)} per ${periodSuffix(periode)}',
+                                      '${formatK(sisa < 0 ? 0 : sisa)} / ${formatK(alokasiPeriode)} per ${periodSuffix(periode)}',
                                 ),
                               );
                             }).toList(),

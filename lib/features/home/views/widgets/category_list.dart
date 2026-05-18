@@ -283,18 +283,23 @@ class CategoryListWidget extends StatelessWidget {
   void _showCategoryPopup(
     BuildContext context, {
     required Map<String, dynamic> cat,
-    required NumberFormat currencyFmt,  
+    required NumberFormat currencyFmt,
   }) {
-
-    
     final txCtrl = Get.find<TransactionController>();
     final nama = cat['nama'] as String? ?? '';
     final alokasiBulanan = (cat['alokasiBulanan'] ?? cat['alokasi'] ?? 0)
         .toDouble();
 
-    final alokasiInput = (cat['alokasiInput'] ?? alokasiBulanan).toDouble();
-
     final periode = cat['periode'] as String? ?? 'monthly';
+
+    double divider = 1;
+    if (periode == 'daily') {
+      divider = 30;
+    } else if (periode == 'weekly') {
+      divider = 4;
+    }
+
+    final alokasiPeriode = alokasiBulanan / divider;
 
     final now = DateTime.now();
 
@@ -363,9 +368,8 @@ class CategoryListWidget extends StatelessWidget {
         .fold(0.0, (total, item) => total + item.amount);
 
     final sisaBulan = alokasiBulanan - usedBulan;
-    final sisaPeriode = alokasiInput - usedPeriode;
+    final sisaPeriode = alokasiPeriode - usedPeriode;
 
-    // Temukan index asli untuk konsistensi warna (opsional, tapi lebih baik pakai keyword match)
     final catIndex = txCtrl.transactions.indexWhere(
       (tx) => matchKategori(tx.kategori),
     );
@@ -398,7 +402,7 @@ class CategoryListWidget extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Alokasi: ${currencyFmt.format(alokasiInput)} / ${periodeLabel(periode).replaceAll(' Ini', '').toLowerCase()}',
+                'Alokasi: ${currencyFmt.format(alokasiPeriode)} / ${periodeLabel(periode).replaceAll(' Ini', '').toLowerCase()}',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 20),
