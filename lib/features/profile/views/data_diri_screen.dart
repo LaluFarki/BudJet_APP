@@ -5,77 +5,14 @@ import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/validation_helper.dart';
+import '../../../core/widgets/app_dialog.dart';
 import '../controllers/profile_controller.dart';
 
 class DataDiriScreen extends StatelessWidget {
   const DataDiriScreen({super.key});
 
   void _showSuccessDialog(String message) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD4F069),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFD4F069).withValues(alpha: 0.4),
-                      blurRadius: 25,
-                      spreadRadius: 5,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.check, color: Colors.white, size: 45),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Get.back(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD4F069),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text(
-                    'Simpan',
-                    style: TextStyle(
-                      color: AppColors.textDark,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    AppDialog.success(message: message, buttonLabel: 'Oke');
   }
 
   void _showEditDialog(
