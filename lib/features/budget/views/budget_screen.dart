@@ -25,7 +25,6 @@ class BudgetScreen extends StatelessWidget {
     );
 
     // Helper: flexible matching antara nama kategori budget & kategori transaksi
-    // Misal "Makan & Minum" cocok dengan "Makanan & Minuman"
     bool matchKategori(String txKategori, String budgetKat) {
       final txLower = txKategori.toLowerCase();
       final katLower = budgetKat.toLowerCase();
@@ -35,33 +34,6 @@ class BudgetScreen extends StatelessWidget {
         if (kw.length >= 3 && txLower.contains(kw)) return true;
       }
       return false;
-    }
-
-    double expenseBulanan(String kat) {
-      final now = DateTime.now();
-      return txCtrl.transactions
-          .where(
-            (tx) =>
-                tx.type == 'expense' &&
-                matchKategori(tx.kategori, kat) &&
-                tx.date.year == now.year &&
-                tx.date.month == now.month,
-          )
-          .fold(0.0, (total, item) => total + item.amount);
-    }
-
-    double expenseHarian(String kat) {
-      final now = DateTime.now();
-      return txCtrl.transactions
-          .where(
-            (tx) =>
-                tx.type == 'expense' &&
-                matchKategori(tx.kategori, kat) &&
-                tx.date.year == now.year &&
-                tx.date.month == now.month &&
-                tx.date.day == now.day,
-          )
-          .fold(0.0, (total, item) => total + item.amount);
     }
 
     return Scaffold(
@@ -161,7 +133,6 @@ class BudgetScreen extends StatelessWidget {
                     case 'weekly':
                       return 'minggu';
                     case 'monthly':
-                      return 'bulan';
                     default:
                       return 'bulan';
                   }
@@ -179,43 +150,43 @@ class BudgetScreen extends StatelessWidget {
                   }
                 }
 
-                double expensePeriode(String kat, String period) {
-                  final now = DateTime.now();
-
-                  return txCtrl.transactions
-                      .where((tx) {
-                        if (tx.type != 'expense') return false;
-                        if (!matchKategori(tx.kategori, kat)) return false;
-
-                        if (period == 'daily') {
-                          return tx.date.year == now.year &&
-                              tx.date.month == now.month &&
-                              tx.date.day == now.day;
-                        }
-
-                        if (period == 'weekly') {
-                          final startOfWeek = DateTime(
-                            now.year,
-                            now.month,
-                            now.day,
-                          ).subtract(Duration(days: now.weekday - 1));
-                          final endOfWeek = startOfWeek.add(
-                            const Duration(days: 7),
-                          );
-
-                          return tx.date.isAtSameMomentAs(startOfWeek) ||
-                              (tx.date.isAfter(startOfWeek) &&
-                                  tx.date.isBefore(endOfWeek));
-                        }
-
-                        return tx.date.year == now.year &&
-                            tx.date.month == now.month;
-                      })
-                      .fold(0.0, (total, item) => total + item.amount);
-                }
-
-                // Gunakan Obx agar SELURUH tampilan reaktif terhadap perubahan transaksi
+                // Gunakan Obx agar seluruh perhitungan transaksi bersifat reaktif
                 return Obx(() {
+                  double expensePeriode(String kat, String period) {
+                    final now = DateTime.now();
+
+                    return txCtrl.transactions
+                        .where((tx) {
+                          if (tx.type != 'expense') return false;
+                          if (!matchKategori(tx.kategori, kat)) return false;
+
+                          if (period == 'daily') {
+                            return tx.date.year == now.year &&
+                                tx.date.month == now.month &&
+                                tx.date.day == now.day;
+                          }
+
+                          if (period == 'weekly') {
+                            final startOfWeek = DateTime(
+                              now.year,
+                              now.month,
+                              now.day,
+                            ).subtract(Duration(days: now.weekday - 1));
+                            final endOfWeek = startOfWeek.add(
+                              const Duration(days: 7),
+                            );
+
+                            return tx.date.isAtSameMomentAs(startOfWeek) ||
+                                (tx.date.isAfter(startOfWeek) &&
+                                    tx.date.isBefore(endOfWeek));
+                          }
+
+                          return tx.date.year == now.year &&
+                              tx.date.month == now.month;
+                        })
+                        .fold(0.0, (total, item) => total + item.amount);
+                  }
+
                   final double expensesTotal = txCtrl.transactions
                       .where(
                         (t) =>
@@ -230,18 +201,20 @@ class BudgetScreen extends StatelessWidget {
                       ? 0.0
                       : sisaTotalBulanan;
 
-                  // Build donut segments based on REMAINING amount
+                  // Ambil bendera penanda saldo utama habis
+                  final bool isSaldoUtamaHabis = sisaDisplay <= 0;
+
+                  // Build donut segments berdasarkan sisa budget
                   final segments = categories.asMap().entries.map((e) {
                     final nama = e.value['nama'] as String? ?? '';
-
                     final alokasi =
                         (e.value['alokasiBulanan'] ?? e.value['alokasi'] ?? 0)
                             .toDouble();
 
-                    final used = expenseBulanan(nama);
-                    final sisaKategori = (alokasi - used) < 0
+                    final used = expensePeriode(nama, 'monthly');
+                    final sisaKategori = isSaldoUtamaHabis
                         ? 0.0
-                        : (alokasi - used);
+                        : ((alokasi - used) < 0 ? 0.0 : (alokasi - used));
 
                     return DonutSegment(
                       percentage: sisaDisplay > 0
@@ -251,8 +224,9 @@ class BudgetScreen extends StatelessWidget {
                     );
                   }).toList();
 
-                  // If sisa is 0, provide a blank segment
-                  if (sisaDisplay <= 0) {
+                  // Jika sisa 0 atau minus, berikan blank segment abu-abu
+                  if (isSaldoUtamaHabis) {
+                    segments.clear();
                     segments.add(
                       const DonutSegment(
                         percentage: 1.0,
@@ -308,15 +282,21 @@ class BudgetScreen extends StatelessWidget {
                                                           e.value['alokasi'] ??
                                                           0)
                                                       .toDouble();
-                                              final used = expenseBulanan(nama);
+
+                                              final used = expensePeriode(
+                                                nama,
+                                                'monthly',
+                                              );
                                               final sisaKategori =
-                                                  (alokasi - used) < 0
+                                                  isSaldoUtamaHabis
                                                   ? 0.0
-                                                  : (alokasi - used);
+                                                  : ((alokasi - used) < 0
+                                                        ? 0.0
+                                                        : (alokasi - used));
 
                                               final pct = sisaDisplay > 0
-                                                  ? (sisaKategori /
-                                                            sisaDisplay *
+                                                  ? ((sisaKategori /
+                                                                sisaDisplay) *
                                                             100)
                                                         .round()
                                                   : 0;
@@ -376,15 +356,18 @@ class BudgetScreen extends StatelessWidget {
                             count: categories.length,
                             children: categories.asMap().entries.map((e) {
                               final nama = e.value['nama'] as String? ?? '';
-
                               final alokasiBulanan =
                                   (e.value['alokasiBulanan'] ??
                                           e.value['alokasi'] ??
                                           0)
                                       .toDouble();
 
-                              final used = expenseBulanan(nama);
-                              final sisa = alokasiBulanan - used;
+                              final used = expensePeriode(nama, 'monthly');
+                              final sisa = isSaldoUtamaHabis
+                                  ? 0.0
+                                  : ((alokasiBulanan - used) < 0
+                                        ? 0.0
+                                        : (alokasiBulanan - used));
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
@@ -392,7 +375,7 @@ class BudgetScreen extends StatelessWidget {
                                   kategori: nama,
                                   index: e.key,
                                   amount:
-                                      '${formatK(sisa < 0 ? 0 : sisa)} / ${formatK(alokasiBulanan)}',
+                                      '${formatK(sisa)} / ${formatK(alokasiBulanan)}',
                                 ),
                               );
                             }).toList(),
@@ -419,14 +402,19 @@ class BudgetScreen extends StatelessWidget {
                               final alokasiPeriode = alokasiBulanan / divider;
 
                               final used = expensePeriode(nama, periode);
-                              final sisa = alokasiPeriode - used;
+                              final sisa = isSaldoUtamaHabis
+                                  ? 0.0
+                                  : ((alokasiPeriode - used) < 0
+                                        ? 0.0
+                                        : (alokasiPeriode - used));
+
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: _buildDetailRow(
                                   kategori: nama,
                                   index: e.key,
                                   amount:
-                                      '${formatK(sisa < 0 ? 0 : sisa)} / ${formatK(alokasiPeriode)} per ${periodSuffix(periode)}',
+                                      '${formatK(sisa)} / ${formatK(alokasiPeriode)} per ${periodSuffix(periode)}',
                                 ),
                               );
                             }).toList(),
@@ -437,7 +425,7 @@ class BudgetScreen extends StatelessWidget {
                       ),
                     ),
                   );
-                }); // <== Penutup Obx
+                });
               },
             ),
     );
@@ -528,7 +516,7 @@ class BudgetScreen extends StatelessWidget {
         Text(
           title,
           style: const TextStyle(
-            color: Colors.grey, // Grey
+            color: Colors.grey,
             fontSize: 9,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
@@ -538,7 +526,7 @@ class BudgetScreen extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            color: Color(0xFF1E1E1E), // textDark
+            color: Color(0xFF1E1E1E),
             fontSize: 14,
             fontWeight: FontWeight.bold,
           ),
@@ -587,6 +575,7 @@ class BudgetScreen extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+        const SizedBox(width: 8),
         Text(
           amount,
           style: const TextStyle(

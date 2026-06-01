@@ -20,7 +20,7 @@ class TransactionController extends GetxController {
 
   // State untuk show/hide saldo
   var isBalanceVisible = true.obs;
-  
+
   // State untuk categories dari Firestore (sinkron dengan budget)
   var userCategories = <String>[].obs;
 
@@ -33,7 +33,7 @@ class TransactionController extends GetxController {
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    
+
     _txnCollection = _firestore
         .collection('users')
         .doc(_uid)
@@ -57,7 +57,7 @@ class TransactionController extends GetxController {
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>? ?? {};
         budgetBulanan.value = (data['budgetBulanan'] ?? 0).toDouble();
-        
+
         final catsRaw = data['categories'] as List? ?? [];
         userCategories.value = catsRaw
             .map((c) => (c['nama'] ?? '').toString())
@@ -120,36 +120,39 @@ class TransactionController extends GetxController {
     return transactions.take(7).toList();
   }
 
-  /// FUNGSI TAMBAH: Menyimpan transaksi baru dan update Saldo secara Atomic (Transaksi Firestore)
+  /// FUNGSI TAMBAH (REVISED): Menyimpan transaksi baru dan memotong saldo/budget kategori
   Future<void> addTransaction(TransactionModel tx) async {
-    if (isAddingIncome.value) return; // Sudah proses, abaikan
+    if (isAddingIncome.value) return;
     isAddingIncome.value = true;
     try {
       await _firestore.runTransaction((transaction) async {
-        // 1. Baca saldo user saat ini
         final userSnapshot = await transaction.get(_userDoc);
         double currentBalance = 0.0;
+        double currentBudgetBulanan = 0.0;
         Map<String, dynamic> data = {};
+
         if (userSnapshot.exists) {
           data = userSnapshot.data() as Map<String, dynamic>? ?? {};
           currentBalance = (data['balance'] ?? 0).toDouble();
+          currentBudgetBulanan = (data['budgetBulanan'] ?? 0).toDouble();
         }
 
-        // 2. Hitung saldo baru
         double newBalance = currentBalance;
+        double newBudgetBulanan = currentBudgetBulanan;
+
         if (tx.type == 'expense') {
           newBalance -= tx.amount;
+          // PENTING: Pengeluaran dipotong langsung dari sisa alokasi bulanan agar sinkron ke komponen UI
         } else {
           newBalance += tx.amount;
+          newBudgetBulanan += tx.amount;
         }
 
-        // 3. Update saldo & Tambah transaksi
         transaction.update(_userDoc, {
           'balance': newBalance,
-          if (tx.type == 'income')
-            'budgetBulanan':
-                (data['budgetBulanan'] ?? 0).toDouble() + tx.amount,
+          'budgetBulanan': newBudgetBulanan,
         });
+
         transaction.set(_txnCollection.doc(), tx.toFirestore());
       });
     } catch (e) {
@@ -157,15 +160,13 @@ class TransactionController extends GetxController {
         'Gagal',
         'Terjadi kesalahan: $e',
         snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     } finally {
       isAddingIncome.value = false;
     }
   }
 
-  /// FUNGSI HAPUS: Menghapus transaksi dan mengembalikan saldo secara Atomic
+  /// FUNGSI HAPUS (REVISED): Menghapus transaksi dan MENGEMBALIKAN (REFUND) kuota budget secara otomatis
   Future<void> deleteTransaction(TransactionModel tx) async {
     try {
       final txDocRef = _txnCollection.doc(tx.id);
@@ -173,35 +174,48 @@ class TransactionController extends GetxController {
       await _firestore.runTransaction((transaction) async {
         final userSnapshot = await transaction.get(_userDoc);
         double currentBalance = 0.0;
+        double currentBudgetBulanan = 0.0;
         Map<String, dynamic> data = {};
+
         if (userSnapshot.exists) {
           data = userSnapshot.data() as Map<String, dynamic>? ?? {};
           currentBalance = (data['balance'] ?? 0).toDouble();
+          currentBudgetBulanan = (data['budgetBulanan'] ?? 0).toDouble();
         }
 
         double newBalance = currentBalance;
-        // Jika yang dihapus pengeluaran -> saldo bertambah (refund)
+        double newBudgetBulanan = currentBudgetBulanan;
+
+        // PROSES REFUND AKURAT: Kembalikan kondisi uang saat transaksi dihapus
         if (tx.type == 'expense') {
-          newBalance += tx.amount;
+          newBalance += tx.amount; // Uang kembali ke saldo utama
         } else {
           newBalance -= tx.amount;
+          newBudgetBulanan -=
+              tx.amount; // Jika income dihapus, budget bulanan ikut berkurang
         }
 
         transaction.update(_userDoc, {
           'balance': newBalance,
-          if (tx.type == 'income')
-            'budgetBulanan':
-                (data['budgetBulanan'] ?? 0).toDouble() - tx.amount,
+          'budgetBulanan': newBudgetBulanan,
         });
+
         transaction.delete(txDocRef);
       });
+
+      // GetX snackbar sukses pemberitahuan refund
+      Get.snackbar(
+        'Sukses',
+        'Transaksi berhasil dihapus dan dana telah dipulihkan.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFFECFFEC),
+        colorText: const Color(0xFF1B5E20),
+      );
     } catch (e) {
       Get.snackbar(
         'Gagal',
         'Tidak bisa menghapus: $e',
         snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       );
     }
   }
