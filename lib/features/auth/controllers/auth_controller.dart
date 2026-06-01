@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../routes/app_routes.dart';
 import '../../transaction/controllers/transaction_controller.dart';
 
-
 class AuthController extends GetxController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -59,30 +58,13 @@ class AuthController extends GetxController {
     if (isLoading.value) return;
     try {
       isLoading.value = true;
-      
-      // Validasi email terdaftar sebelum proses login berjalan
-      try {
-        final methods = await _auth.fetchSignInMethodsForEmail(email);
-        if (methods.isEmpty) {
-          Get.snackbar(
-            'Login Gagal',
-            'Email yang dimasukkan belum terdaftar. Silakan daftar terlebih dahulu.',
-            backgroundColor: const Color(0xFFFFECEC),
-            colorText: const Color(0xFF8B0000),
-            snackPosition: SnackPosition.TOP,
-            duration: const Duration(seconds: 4),
-            borderRadius: 12,
-            margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          );
-          return;
-        }
-      } catch (_) {
-        // Jika terjadi error pada fetchSignInMethodsForEmail, kita lanjutkan
-        // ke proses login utama agar Firebase Auth yang menangani.
-      }
 
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      // Menggunakan .trim() agar spasi di awal/akhir email otomatis terhapus
+      await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+
       _checkOnboardingAndNavigate();
     } on FirebaseAuthException catch (e) {
       Get.closeAllSnackbars();
@@ -169,7 +151,9 @@ class AuthController extends GetxController {
       }
 
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-      final authz = await googleUser.authorizationClient.authorizationForScopes([]);
+      final authz = await googleUser.authorizationClient.authorizationForScopes(
+        [],
+      );
 
       final AuthCredential googleCredential = GoogleAuthProvider.credential(
         accessToken: authz?.accessToken,
@@ -177,8 +161,9 @@ class AuthController extends GetxController {
       );
 
       try {
-        UserCredential userCredential =
-            await _auth.signInWithCredential(googleCredential);
+        UserCredential userCredential = await _auth.signInWithCredential(
+          googleCredential,
+        );
 
         if (userCredential.user != null) {
           final userDoc = await _firestore
@@ -190,13 +175,13 @@ class AuthController extends GetxController {
                 .collection('users')
                 .doc(userCredential.user!.uid)
                 .set({
-              'name': userCredential.user!.displayName ?? 'Pengguna',
-              'email': userCredential.user!.email,
-              'profilePic': userCredential.user!.photoURL ?? '',
-              'budgetBulanan': 0,
-              'balance': 0,
-              'createdAt': FieldValue.serverTimestamp(),
-            });
+                  'name': userCredential.user!.displayName ?? 'Pengguna',
+                  'email': userCredential.user!.email,
+                  'profilePic': userCredential.user!.photoURL ?? '',
+                  'budgetBulanan': 0,
+                  'balance': 0,
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
           }
         }
         _checkOnboardingAndNavigate();
@@ -233,8 +218,10 @@ class AuthController extends GetxController {
   }
 
   // ─── Reset Password via Email ───────────────────────────────────────────────
-  Future<void> sendPasswordResetEmail(String email,
-      {VoidCallback? onSuccess}) async {
+  Future<void> sendPasswordResetEmail(
+    String email, {
+    VoidCallback? onSuccess,
+  }) async {
     if (isLoading.value) return;
     try {
       isLoading.value = true;
@@ -251,9 +238,9 @@ class AuthController extends GetxController {
           snackPosition: SnackPosition.TOP,
           duration: const Duration(seconds: 5),
           borderRadius: 12,
-        margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      );
+          margin: const EdgeInsets.only(top: 40, left: 16, right: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        );
       }
     } on FirebaseAuthException catch (e) {
       Get.closeAllSnackbars();

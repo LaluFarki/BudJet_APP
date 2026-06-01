@@ -280,6 +280,7 @@ class CategoryListWidget extends StatelessWidget {
   // Pop-up saat kategori di-klik
   // Menampilkan: Sisa Bulan Ini, Sisa Hari Ini, Tombol Edit
   // ──────────────────────────────────────────
+
   void _showCategoryPopup(
     BuildContext context, {
     required Map<String, dynamic> cat,
@@ -289,9 +290,9 @@ class CategoryListWidget extends StatelessWidget {
     final nama = cat['nama'] as String? ?? '';
     final alokasiBulanan = (cat['alokasiBulanan'] ?? cat['alokasi'] ?? 0)
         .toDouble();
-
     final periode = cat['periode'] as String? ?? 'monthly';
 
+    // 🌟 Tetap pakai logika pembagian asli dari kamu & tim
     double divider = 1;
     if (periode == 'daily') {
       divider = 30;
@@ -300,17 +301,12 @@ class CategoryListWidget extends StatelessWidget {
     }
 
     final alokasiPeriode = alokasiBulanan / divider;
-
     final now = DateTime.now();
 
-    // Helper: cek apakah kategori transaksi cocok dengan nama budget
-    // Mendukung nama berbeda (misal "Makanan & Minuman" vs "Makan & Minum")
     bool matchKategori(String txKategori) {
       final txLower = txKategori.toLowerCase();
       final namaLower = nama.toLowerCase();
-      // Exact match
       if (txLower == namaLower) return true;
-      // Contains match ("makan" ada di kedua versi)
       final keywords = namaLower.split(RegExp(r'[\s&]+'));
       for (final kw in keywords) {
         if (kw.length >= 3 && txLower.contains(kw)) return true;
@@ -329,22 +325,10 @@ class CategoryListWidget extends StatelessWidget {
         )
         .fold(0.0, (total, item) => total + item.amount);
 
-    final usedHari = txCtrl.transactions
-        .where(
-          (tx) =>
-              tx.type == 'expense' &&
-              matchKategori(tx.kategori) &&
-              tx.date.year == now.year &&
-              tx.date.month == now.month &&
-              tx.date.day == now.day,
-        )
-        .fold(0.0, (total, item) => total + item.amount);
-
     final usedPeriode = txCtrl.transactions
         .where((tx) {
           final isSameCategory =
               tx.type == 'expense' && matchKategori(tx.kategori);
-
           if (!isSameCategory) return false;
 
           if (periode == 'daily') {
@@ -354,12 +338,20 @@ class CategoryListWidget extends StatelessWidget {
           }
 
           if (periode == 'weekly') {
-            final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+            // 🛠️ FIX UTAMA: Bersihkan komponen jam, menit, detik (Set ke jam 00:00)
+            // Supaya transaksi di hari yang sama tidak tereliminasi oleh jam berjalan
+            final todayMidnight = DateTime(now.year, now.month, now.day);
+
+            // Cari hari Senin di minggu ini
+            final startOfWeek = todayMidnight.subtract(
+              Duration(days: now.weekday - 1),
+            );
+            // Batas akhir adalah hari Senin depan jam 00:00
             final endOfWeek = startOfWeek.add(const Duration(days: 7));
 
-            return tx.date.isAfter(
-                  startOfWeek.subtract(const Duration(seconds: 1)),
-                ) &&
+            // Transaksi sah jika: sama dengan/setelah Senin jam 00:00 DAN sebelum Senin depan jam 00:00
+            return (tx.date.isAtSameMomentAs(startOfWeek) ||
+                    tx.date.isAfter(startOfWeek)) &&
                 tx.date.isBefore(endOfWeek);
           }
 
@@ -385,7 +377,6 @@ class CategoryListWidget extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header icon + nama
               CircleAvatar(
                 radius: 28,
                 backgroundColor: catColor.withValues(alpha: 0.15),
@@ -407,7 +398,6 @@ class CategoryListWidget extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Sisa Bulan Ini
               _infoRow(
                 label: 'Sisa Bulan Ini',
                 value: currencyFmt.format(sisaBulan < 0 ? 0 : sisaBulan),
@@ -427,7 +417,6 @@ class CategoryListWidget extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Tombol Edit Budget
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

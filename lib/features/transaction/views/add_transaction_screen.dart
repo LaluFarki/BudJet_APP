@@ -12,16 +12,18 @@ import '../../../core/constants/app_colors.dart';
 import '../controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 
-
-
 class AddTransactionScreen extends StatelessWidget {
   // Load kategori dari Firestore (budget user)
   final bool isVoiceDraft;
   final TransactionModel? existingTx;
 
   AddTransactionScreen({super.key})
-      : isVoiceDraft = Get.arguments is Map && (Get.arguments as Map)['isVoiceDraft'] == true,
-        existingTx = Get.arguments is TransactionModel ? Get.arguments as TransactionModel : null {
+    : isVoiceDraft =
+          Get.arguments is Map &&
+          (Get.arguments as Map)['isVoiceDraft'] == true,
+      existingTx = Get.arguments is TransactionModel
+          ? Get.arguments as TransactionModel
+          : null {
     _loadCategories();
 
     // Persiapkan model mana yang akan dipakai untuk mengisi Field form
@@ -36,7 +38,10 @@ class AddTransactionScreen extends StatelessWidget {
     // Jika ada data (dari Edit atau Voice Draft), isi controller form secara otomatis
     if (draftToFill != null) {
       _titleController.text = draftToFill.title;
-      _amountController.text = NumberFormat('#,###', 'id_ID').format(draftToFill.amount.toInt());
+      _amountController.text = NumberFormat(
+        '#,###',
+        'id_ID',
+      ).format(draftToFill.amount.toInt());
       _selectedCategory.value = draftToFill.kategori;
       _selectedDate.value = draftToFill.date;
     }
@@ -230,13 +235,16 @@ class AddTransactionScreen extends StatelessWidget {
   void _submit() async {
     FocusManager.instance.primaryFocus?.unfocus();
     if (_formKey.currentState!.validate()) {
-      // final TransactionModel? existingTx = Get.arguments as TransactionModel?;
-      final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      final cleanAmount = _amountController.text.replaceAll(
+        RegExp(r'[^0-9]'),
+        '',
+      );
       final amount = double.parse(cleanAmount.isEmpty ? '0' : cleanAmount);
 
-      // Cek saldo jika ini transaksi baru (bukan edit)
+      // 1. Cek saldo utama jika ini transaksi baru (bukan edit)
       if (existingTx == null) {
-        final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
+        final sisaSaldo =
+            txController.budgetBulanan.value - txController.totalExpense;
         if (amount > sisaSaldo) {
           AppDialog.error(
             title: 'Saldo Tidak Cukup',
@@ -249,60 +257,87 @@ class AddTransactionScreen extends StatelessWidget {
           return;
         }
 
-        // Cek budget harian kategori (kumulatif: total hari ini + transaksi baru)
-        final dailyBudget = _categoryDailyBudget[_selectedCategory.value] ?? 0;
-        if (dailyBudget > 0) {
-          final today = DateTime.now();
-          // Hitung total pengeluaran hari ini untuk kategori yang dipilih
-          final todaySpent = txController.transactions
-              .where((t) =>
-                  t.type == 'expense' &&
-                  t.kategori == _selectedCategory.value &&
-                  t.date.year == today.year &&
-                  t.date.month == today.month &&
-                  t.date.day == today.day)
-              .fold(0.0, (sum, t) => sum + t.amount);
+        // 2. Ambil data konfigurasi budget untuk kategori yang dipilih
+        final currentCategory = _selectedCategory.value;
+        final budgetInfo = _categoryBudgetData[currentCategory];
 
-          final totalSetelahTransaksi = todaySpent + amount;
+        if (budgetInfo != null) {
+          final String periode = budgetInfo['periode'] ?? 'monthly';
 
-          if (totalSetelahTransaksi > dailyBudget) {
-            // Tanya konfirmasi sebelum lanjut
-            final confirmed = await AppDialog.confirm(
-              title: 'Melewati Budget Harian',
-              message: todaySpent > 0
-                  ? 'Total pengeluaran hari ini untuk "${_selectedCategory.value}" '
-                    'akan menjadi ${AppHelpers.formatCurrency(totalSetelahTransaksi)}, '
-                    'melebihi budget harian sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
-                    'Kamu sudah menghabiskan ${AppHelpers.formatCurrency(todaySpent)} hari ini.'
-                  : 'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) '
-                    'melebihi budget harian kategori "${_selectedCategory.value}" '
-                    'sebesar ${AppHelpers.formatCurrency(dailyBudget)}.\n\n'
-                    'Melanjutkan dapat mengganggu rencana keuangan harianmu.',
-              cancelLabel: 'Batalkan',
-              confirmLabel: 'Tetap Lanjut',
-              icon: Icons.calendar_today_outlined,
-              iconColor: const Color(0xFFF59E0B),
-              iconBgColor: const Color(0xFFFFF3CD),
-              confirmColor: const Color(0xFFF59E0B),
-              confirmTextColor: Colors.white,
+          // Menggunakan tipe 'num' agar aman dari kendala cast error tipe data angka dari database
+          final num alokasiRaw = budgetInfo['alokasiInput'] ?? 0;
+          final double alokasiInput = alokasiRaw.toDouble();
+
+          if (alokasiInput > 0) {
+            // 🛠️ FIX UTAMA: Hitung jatah per periode sesuai konsep pembagian timmu
+            double divider = 1;
+            if (periode == 'daily') {
+              divider = 30;
+            } else if (periode == 'weekly') {
+              divider = 4; // Dibagi 4 minggu
+            }
+            final alokasiPeriode = alokasiInput / divider;
+
+            // Hitung total pengeluaran lalu berdasarkan PERIODE ASLI (daily, weekly, atau monthly)
+            final previousSpent = _usedByCategoryAndPeriod(
+              category: currentCategory,
+              period: periode,
+              selectedDate: _selectedDate.value,
             );
-            if (confirmed != true) return; // User pilih Batalkan
+
+            final totalSetelahTransaksi = previousSpent + amount;
+
+            // 🛠️ PERBAIKAN: Bandingkan dengan alokasiPeriode (bukan alokasiInput lagi)
+            if (totalSetelahTransaksi > alokasiPeriode) {
+              final labelPeriode = _periodLabel(
+                periode,
+              ); // menghasilkan 'harian', 'mingguan', atau 'bulanan'
+
+              // Hitung nominal kelebihannya agar info di alert masuk akal
+              final kelebihanBudget = totalSetelahTransaksi - alokasiPeriode;
+
+              // Tampilkan dialog konfirmasi dinamis yang patuh pada jatah periode kategori asli
+              final confirmed = await AppDialog.confirm(
+                title: 'Melewati Budget ${labelPeriode.capitalizeFirst}',
+                message: previousSpent > 0
+                    ? 'Total pengeluaran $labelPeriode ini untuk "$currentCategory" '
+                          'akan menjadi ${AppHelpers.formatCurrency(totalSetelahTransaksi)}, '
+                          'melebihi budget $labelPeriode sebesar ${AppHelpers.formatCurrency(kelebihanBudget)} '
+                          '(Limit $labelPeriode: ${AppHelpers.formatCurrency(alokasiPeriode)}).\n\n'
+                          'Kamu sudah menghabiskan ${AppHelpers.formatCurrency(previousSpent)} pada periode ini.'
+                    : 'Pengeluaran ini (${AppHelpers.formatCurrency(amount)}) '
+                          'akan membuat total pengeluaranmu menjadi ${AppHelpers.formatCurrency(totalSetelahTransaksi)}, '
+                          'melebihi budget $labelPeriode kategori "$currentCategory" '
+                          'sebesar ${AppHelpers.formatCurrency(kelebihanBudget)} '
+                          '(Limit $labelPeriode: ${AppHelpers.formatCurrency(alokasiPeriode)}).\n\n'
+                          'Melanjutkan dapat mengganggu rencana keuangan ${labelPeriode}mu.',
+                cancelLabel: 'Batalkan',
+                confirmLabel: 'Tetap Lanjut',
+                icon: Icons.calendar_today_outlined,
+                iconColor: const Color(0xFFF59E0B),
+                iconBgColor: const Color(0xFFFFF3CD),
+                confirmColor: const Color(0xFFF59E0B),
+                confirmTextColor: Colors.white,
+              );
+              if (confirmed != true)
+                return; // Jika user memilih Batalkan, proses dihentikan
+            }
           }
         }
       }
 
-    _isLoading.value = true;
+      _isLoading.value = true;
 
-    final newTransaction = TransactionModel(
-      id: existingTx?.id ?? '',
-      amount: amount,
-      createdAt: existingTx?.createdAt ?? DateTime.now(),
-      date: _selectedDate.value,
-      kategori: _selectedCategory.value,
-      note: '',
-      title: _titleController.text,
-      type: existingTx?.type ?? 'expense',
-    );
+      final newTransaction = TransactionModel(
+        id: existingTx?.id ?? '',
+        amount: amount,
+        createdAt: existingTx?.createdAt ?? DateTime.now(),
+        date: _selectedDate.value,
+        kategori: _selectedCategory.value,
+        note: '',
+        title: _titleController.text,
+        type: existingTx?.type ?? 'expense',
+      );
 
       if (existingTx != null) {
         await txController.updateTransaction(existingTx!, newTransaction);
@@ -310,14 +345,14 @@ class AddTransactionScreen extends StatelessWidget {
         await txController.addTransaction(newTransaction);
       }
 
-    _isLoading.value = false;
+      _isLoading.value = false;
 
-    if (existingTx != null) {
-      _showSuccessDialog('Transaksi Berhasil Diperbarui');
-    } else {
-      Get.offNamed('/success-tx', arguments: newTransaction);
+      if (existingTx != null) {
+        _showSuccessDialog('Transaksi Berhasil Diperbarui');
+      } else {
+        Get.offNamed('/success-tx', arguments: newTransaction);
+      }
     }
-  }
   }
 
   @override
@@ -369,72 +404,50 @@ class AddTransactionScreen extends StatelessWidget {
                             color: Colors.grey.withValues(alpha: 0.1),
                           ),
                         ),
-                        child: Obx(() => Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            TextFormField(
-                              controller: _titleController,
-                              onChanged: (val) {
-                                _titleText.value = val;
-                                if (val.length < 20 && _showTitleWarning.value) {
-                                  _showTitleWarning.value = false;
-                                }
-                              },
-                              inputFormatters: [
-                                TextInputFormatter.withFunction((oldValue, newValue) {
-                                  if (newValue.text.length > 20) {
-                                    if (!_showTitleWarning.value) {
-                                      _titleWarningTimer?.cancel();
-                                      _showTitleWarning.value = true;
-                                      _titleWarningTimer = Timer(const Duration(milliseconds: 2200), () {
-                                        _showTitleWarning.value = false;
-                                      });
-                                    }
-                                    return oldValue;
+                        child: Obx(
+                          () => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextFormField(
+                                controller: _titleController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Nama Pengeluaran',
+                                  hintText: 'Masukkan nama pengeluaran',
+                                ),
+
+                                // 1. BATASI JUMLAH KARAKTER (Misal: Maksimal 20 karakter)
+                                maxLength: 20,
+
+                                // 2. KUNCI HANYA UNTUK HURUF DAN SPASI
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'[a-zA-Z\s]'),
+                                  ),
+                                ],
+
+                                // Properti validator kamu yang sudah ada tetap biarkan di bawahnya
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Nama pengeluaran tidak boleh kosong';
                                   }
-                                  return newValue;
-                                }),
-                              ],
-                              decoration: const InputDecoration(
-                                labelText: 'Nama Pengeluaran',
-                                labelStyle: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.normal,
-                                ),
-                                floatingLabelStyle: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                border: InputBorder.none,
-                                suffixIcon: Icon(
-                                  Icons.edit_outlined,
-                                  color: Colors.grey,
-                                  size: 20,
-                                ),
+                                  return null;
+                                },
                               ),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                              validator: (val) =>
-                                  val == null || val.isEmpty ? 'Isi judul' : null,
-                            ),
-                            if (_showTitleWarning.value)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 4),
-                                child: Text(
-                                  'Maksimal 20 Karakter!',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
+                              if (_showTitleWarning.value)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Maksimal 20 Karakter!',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
-                        )),
+                            ],
+                          ),
+                        ),
                       ),
 
                       const SizedBox(height: 16),
@@ -451,117 +464,129 @@ class AddTransactionScreen extends StatelessWidget {
                             color: Colors.grey.withValues(alpha: 0.1),
                           ),
                         ),
-                        child: Obx(() => Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            TextFormField(
-                              controller: _amountController,
-                              keyboardType: TextInputType.number,
-                              onChanged: (val) {
-                                final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
-                                double parsed = double.tryParse(digits) ?? 0;
+                        child: Obx(
+                          () => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextFormField(
+                                controller: _amountController,
+                                keyboardType: TextInputType.number,
+                                onChanged: (val) {
+                                  final digits = val.replaceAll(
+                                    RegExp(r'[^0-9]'),
+                                    '',
+                                  );
+                                  double parsed = double.tryParse(digits) ?? 0;
 
-                                if (parsed < 100000000 && _showNominalWarning.value) {
-                                  _showNominalWarning.value = false;
-                                }
+                                  if (parsed < 100000000 &&
+                                      _showNominalWarning.value) {
+                                    _showNominalWarning.value = false;
+                                  }
 
-                                final sisaSaldo = txController.budgetBulanan.value - txController.totalExpense;
+                                  final sisaSaldo =
+                                      txController.budgetBulanan.value -
+                                      txController.totalExpense;
 
-                                if (sisaSaldo > 0 && parsed > sisaSaldo) {
-                                  parsed = sisaSaldo.floorToDouble();
+                                  if (sisaSaldo > 0 && parsed > sisaSaldo) {
+                                    parsed = sisaSaldo.floorToDouble();
 
-                                  final capped = NumberFormat(
-                                    '#,###',
-                                    'id_ID',
-                                  ).format(parsed.toInt());
+                                    final capped = NumberFormat(
+                                      '#,###',
+                                      'id_ID',
+                                    ).format(parsed.toInt());
 
-                                  _amountController.text = capped;
-                                  _amountController.selection =
-                                      TextSelection.collapsed(
-                                        offset: capped.length,
-                                      );
-                                }
+                                    _amountController.text = capped;
+                                    _amountController.selection =
+                                        TextSelection.collapsed(
+                                          offset: capped.length,
+                                        );
+                                  }
 
-                                _enteredAmount.value = parsed;
-                              },
-                              inputFormatters: [
-                                RupiahInputFormatter(
-                                  max: 100000000,
-                                  onMaxExceeded: () {
-                                    if (!_showNominalWarning.value) {
-                                      _nominalWarningTimer?.cancel();
-                                      _showNominalWarning.value = true;
-                                      _nominalWarningTimer = Timer(const Duration(milliseconds: 2200), () {
-                                        _showNominalWarning.value = false;
-                                      });
-                                    }
-                                  },
-                                ),
-                              ],
-                              decoration: const InputDecoration(
-                                labelText: 'Nominal',
-                                labelStyle: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.normal,
-                                ),
-                                floatingLabelStyle: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                prefixText: 'Rp ',
-                                prefixStyle: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: AppColors.textDark,
-                                ),
-                                border: InputBorder.none,
-                                suffixIcon: Icon(
-                                  Icons.edit_outlined,
-                                  color: Colors.grey,
-                                  size: 20,
-                                ),
-                              ),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                              validator: (val) {
-                                if (val == null || val.isEmpty) {
-                                  return 'Isi nominal';
-                                }
-                                final cleanVal = val.replaceAll(
-                                  RegExp(r'[^0-9]'),
-                                  '',
-                                );
-
-                                if (double.tryParse(cleanVal) == null) {
-                                  return 'Angka tidak valid';
-                                }
-
-                                return null;
-                              },
-                            ),
-                            if (_showNominalWarning.value)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 4),
-                                child: Text(
-                                  'Max Rp 100.000.000!',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 10,
+                                  _enteredAmount.value = parsed;
+                                },
+                                inputFormatters: [
+                                  RupiahInputFormatter(
+                                    max: 100000000,
+                                    onMaxExceeded: () {
+                                      if (!_showNominalWarning.value) {
+                                        _nominalWarningTimer?.cancel();
+                                        _showNominalWarning.value = true;
+                                        _nominalWarningTimer = Timer(
+                                          const Duration(milliseconds: 2200),
+                                          () {
+                                            _showNominalWarning.value = false;
+                                          },
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ],
+                                decoration: const InputDecoration(
+                                  labelText: 'Nominal',
+                                  labelStyle: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                  floatingLabelStyle: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                   ),
+                                  prefixText: 'Rp ',
+                                  prefixStyle: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: AppColors.textDark,
+                                  ),
+                                  border: InputBorder.none,
+                                  suffixIcon: Icon(
+                                    Icons.edit_outlined,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
                                 ),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                validator: (val) {
+                                  if (val == null || val.isEmpty) {
+                                    return 'Isi nominal';
+                                  }
+                                  final cleanVal = val.replaceAll(
+                                    RegExp(r'[^0-9]'),
+                                    '',
+                                  );
+
+                                  if (double.tryParse(cleanVal) == null) {
+                                    return 'Angka tidak valid';
+                                  }
+
+                                  return null;
+                                },
                               ),
-                          ],
-                        )),
+                              if (_showNominalWarning.value)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Max Rp 100.000.000!',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                       // Indikator sisa saldo real-time
                       if (existingTx == null)
                         Obx(() {
-                          final sisaSaldo = txController.budgetBulanan.value -
+                          final sisaSaldo =
+                              txController.budgetBulanan.value -
                               txController.totalExpense;
                           final setelahTransaksi =
                               sisaSaldo - _enteredAmount.value;
@@ -843,9 +868,7 @@ class AddTransactionScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    existingTx != null
-                        ? 'Simpan Perubahan?'
-                        : 'Sudah Cocok?',
+                    existingTx != null ? 'Simpan Perubahan?' : 'Sudah Cocok?',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       color: AppColors.textDark,
