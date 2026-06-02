@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:1015990778323:android:e2236eaa465a013ab65726",
         "android_client_info": {
-          "package_name": "com.example.flutter_application_1"
+          "package_name": "com.budjet.app"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "1015990778323-bc2jg2kcph36bgs82hns3la7q7r7uk37.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.flutter_application_1",
+            "package_name": "com.budjet.app",
             "certificate_hash": "b882c37161fb1d165553c49daeb6779b47659512"
           }
         },

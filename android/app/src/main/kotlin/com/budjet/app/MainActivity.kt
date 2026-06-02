@@ -1,4 +1,4 @@
-package com.example.manajemen_keuangan
+package com.budjet.app
 
 import io.flutter.embedding.android.FlutterActivity
 
